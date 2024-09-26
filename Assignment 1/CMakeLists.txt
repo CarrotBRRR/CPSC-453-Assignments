@@ -88,21 +88,21 @@ endif()
 
 # Compile our main application
 file(GLOB SOURCES
-    453-skeleton/*
+    assignment-1/*
 )
 set(INCLUDES ${INCLUDES} src)
 
-set(APP_NAME "453-skeleton")
+set(APP_NAME "assignment-1")
 
 
 # Copy all the shaders and tell the build system to re-run CMAKE if one of them changes
-file(GLOB files 453-skeleton/shaders/*)
+file(GLOB files assignment-1/shaders/*)
 foreach(file ${files})
 	get_filename_component(name ${file} NAME)
 	configure_file(${file} shaders/${name})
 endforeach()
 
-add_executable(${APP_NAME} ${SOURCES})
+add_executable(${APP_NAME} ${SOURCES}   "assignment-1/Sierpinski.cpp" "assignment-1/Sierpinski.h" "assignment-1/Pythagoras.cpp" "assignment-1/Pythagoras.h")
 target_include_directories(${APP_NAME} PRIVATE ${INCLUDES})
 target_link_libraries(${APP_NAME} ${LIBRARIES})
 target_compile_definitions(${APP_NAME} PRIVATE ${DEFINITIONS})

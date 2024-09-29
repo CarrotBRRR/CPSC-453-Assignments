@@ -12,6 +12,7 @@
 
 #include "Sierpinski.h"
 #include "Pythagoras.h"
+#include "Koch.h"
 
 int level = 1;
 int display_mode = 0;
@@ -27,8 +28,6 @@ void level_down() {
 		level--;
 	}
 }
-
-
 
 class MyCallbacks : public CallbackInterface {
 
@@ -49,11 +48,11 @@ public:
 			std::cout << "Level: " << level << std::endl;
 		}
 		else if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-			display_mode = (display_mode - 1) % 3;
+			display_mode = (((display_mode - 1) % 4) + 4) % 4;
 			std::cout << "Display Mode: " << display_mode << std::endl;
 		}
 		else if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
-			display_mode = (display_mode + 1) % 3;
+			display_mode = (display_mode + 1) % 4;
 			std::cout << "Display Mode: " << display_mode << std::endl;
 		}
 	}
@@ -80,6 +79,12 @@ int main() {
 	// Pythagoras tree
 	Pythagoras pythagoras(level);
 
+	// Koch snowflake
+	Koch koch(level);
+
+	// Draw Array Style
+	int draw_style = 0;
+
 	// CALLBACKS
 	window.setCallbacks(std::make_shared<MyCallbacks>(shader)); // can also update callbacks to new ones
 
@@ -96,11 +101,19 @@ int main() {
 		case 0:
 			sierpinski.setDepth(level);
 			sierpinski.generate(cpuGeom.verts, cpuGeom.cols);
+			draw_style = GL_TRIANGLES;
 			break;
 
 		case 1:
 			pythagoras.setDepth(level);
 			pythagoras.generate(cpuGeom.verts, cpuGeom.cols);
+			draw_style = GL_TRIANGLE_STRIP;
+			break;
+
+		case 2:
+			koch.setDepth(level);
+			koch.generate(cpuGeom.verts, cpuGeom.cols);
+			draw_style = GL_LINES;
 			break;
 
 		default:
@@ -119,7 +132,7 @@ int main() {
 		glEnable(GL_FRAMEBUFFER_SRGB);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glDrawArrays(GL_TRIANGLES, 0, cpuGeom.verts.size());
+		glDrawArrays(draw_style, 0, cpuGeom.verts.size());
 
 		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 		window.swapBuffers();

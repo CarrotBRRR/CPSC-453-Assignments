@@ -62,9 +62,6 @@ void Koch::draw(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colors
 		draw(vertices, colors, depth - 1, A, C, color);
 		draw(vertices, colors, depth - 1, C, B, color);
 		draw(vertices, colors, depth - 1, B, p2, color);
-
-
-
 	}
 }
 

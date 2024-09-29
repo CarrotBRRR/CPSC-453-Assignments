@@ -13,6 +13,7 @@
 #include "Sierpinski.h"
 #include "Pythagoras.h"
 #include "Koch.h"
+#include "Dragon.h"
 
 int level = 1;
 int display_mode = 0;
@@ -82,6 +83,9 @@ int main() {
 	// Koch snowflake
 	Koch koch(level);
 
+	// Dragon curve
+	Dragon dragon(level);
+
 	// Draw Array Style
 	int draw_style = 0;
 
@@ -113,6 +117,12 @@ int main() {
 		case 2:
 			koch.setDepth(level);
 			koch.generate(cpuGeom.verts, cpuGeom.cols);
+			draw_style = GL_LINES;
+			break;
+
+		case 3:
+			dragon.setDepth(level);
+			dragon.generate(cpuGeom.verts, cpuGeom.cols);
 			draw_style = GL_LINES;
 			break;
 

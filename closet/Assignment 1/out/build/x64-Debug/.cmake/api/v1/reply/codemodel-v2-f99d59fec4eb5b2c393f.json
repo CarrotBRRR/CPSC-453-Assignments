@@ -1,0 +1,205 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2,
+						4
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-d0094a50bb2071803777.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"build" : "thirdparty/glad",
+					"jsonFile" : "directory-thirdparty.glad-Debug-3a35bed35493e33fbec6.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "thirdparty/glad",
+					"targetIndexes" : 
+					[
+						2
+					]
+				},
+				{
+					"build" : "thirdparty/glfw-3.3.2",
+					"childIndexes" : 
+					[
+						3
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-thirdparty.glfw-3.3.2-Debug-962375307db33291b883.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 2,
+					"source" : "thirdparty/glfw-3.3.2",
+					"targetIndexes" : 
+					[
+						4
+					]
+				},
+				{
+					"build" : "thirdparty/glfw-3.3.2/src",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-thirdparty.glfw-3.3.2.src-Debug-df51453905216fe6c251.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.0"
+					},
+					"parentIndex" : 2,
+					"projectIndex" : 2,
+					"source" : "thirdparty/glfw-3.3.2/src",
+					"targetIndexes" : 
+					[
+						3
+					]
+				},
+				{
+					"build" : "thirdparty/fmt-7.0.3",
+					"jsonFile" : "directory-thirdparty.fmt-7.0.3-Debug-5441e02a5a35c4d0bcd2.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.1.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 3,
+					"source" : "thirdparty/fmt-7.0.3",
+					"targetIndexes" : 
+					[
+						1
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "453-skeleton",
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "Glad",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						2
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						2,
+						3
+					],
+					"name" : "GLFW",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						3,
+						4
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						4
+					],
+					"name" : "FMT",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "453-skeleton::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-453-skeleton-Debug-5b618f76597c99ab0d18.json",
+					"name" : "453-skeleton",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 4,
+					"id" : "fmt::@2c61785717895844583f",
+					"jsonFile" : "target-fmt-Debug-cc6177d251ad9d820765.json",
+					"name" : "fmt",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "glad::@140c1f658771f9cc4abc",
+					"jsonFile" : "target-glad-Debug-5f1c10b8b45a81f5292f.json",
+					"name" : "glad",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "glfw::@c8db1781ba139d98a588",
+					"jsonFile" : "target-glfw-Debug-0bc8f8b4a7604d275d9a.json",
+					"name" : "glfw",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "uninstall::@438bdad978d0008df4cd",
+					"jsonFile" : "target-uninstall-Debug-ac6c24ec7247e4583647.json",
+					"name" : "uninstall",
+					"projectIndex" : 2
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Users/dominic/Desktop/Schoolwork/2024_Q4_Fall/CPSC 453/Assignments/closet/Assignment 1/out/build/x64-Debug",
+		"source" : "C:/Users/dominic/Desktop/Schoolwork/2024_Q4_Fall/CPSC 453/Assignments/closet/Assignment 1"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}

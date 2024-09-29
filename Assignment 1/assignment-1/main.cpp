@@ -11,6 +11,7 @@
 #include "Window.h"
 
 #include "Sierpinski.h"
+#include "Pythagoras.h"
 
 int level = 1;
 int display_mode = 0;
@@ -27,10 +28,12 @@ void level_down() {
 	}
 }
 
+
+
 class MyCallbacks : public CallbackInterface {
 
 public:
-	MyCallbacks(ShaderProgram& shader, Sierpinski& sierpinski) : shader(shader), sierpinski(sierpinski) {}
+	MyCallbacks(ShaderProgram& shader) : shader(shader) {}
 
 	virtual void keyCallback(int key, int scancode, int action, int mods) {
 		if (key == GLFW_KEY_R && action == GLFW_PRESS) {
@@ -40,15 +43,13 @@ public:
 		else if (key == GLFW_KEY_UP && action == GLFW_PRESS) {
 			level_up();
 			std::cout << "Level: " << level << std::endl;
-			sierpinski.setDepth(level);
 		}
 		else if (key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
 			level_down();
 			std::cout << "Level: " << level << std::endl;
-			sierpinski.setDepth(level);
 		}
 		else if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-			display_mode = abs((display_mode - 1) % 3);
+			display_mode = (display_mode - 1) % 3;
 			std::cout << "Display Mode: " << display_mode << std::endl;
 		}
 		else if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
@@ -58,8 +59,7 @@ public:
 	}
 
 private:
-	ShaderProgram& shader;
-	Sierpinski& sierpinski;
+	ShaderProgram& shader;	
 };
 
 int main() {
@@ -77,8 +77,11 @@ int main() {
 	// Sierpinski triangle
 	Sierpinski sierpinski(level);
 
+	// Pythagoras tree
+	Pythagoras pythagoras(level);
+
 	// CALLBACKS
-	window.setCallbacks(std::make_shared<MyCallbacks>(shader, sierpinski)); // can also update callbacks to new ones
+	window.setCallbacks(std::make_shared<MyCallbacks>(shader)); // can also update callbacks to new ones
 
 	// GEOMETRY
 	CPU_Geometry cpuGeom;
@@ -89,8 +92,23 @@ int main() {
 		glfwPollEvents();
 
 		// Generate the Sierpinski triangle
-		sierpinski.generate(cpuGeom.verts, cpuGeom.cols);
+		switch (display_mode) {
+		case 0:
+			sierpinski.setDepth(level);
+			sierpinski.generate(cpuGeom.verts, cpuGeom.cols);
+			break;
 
+		case 1:
+			pythagoras.setDepth(level);
+			pythagoras.generate(cpuGeom.verts, cpuGeom.cols);
+			break;
+
+		default:
+			cpuGeom.verts.clear();
+			cpuGeom.cols.clear();
+			break;
+		}
+		
 		// Send the updated vertices and colors to the GPU
 		gpuGeom.setVerts(cpuGeom.verts);
 		gpuGeom.setCols(cpuGeom.cols);

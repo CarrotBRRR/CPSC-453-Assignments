@@ -11,10 +11,10 @@ public:
 	void setDepth(int depth);
 	int getDepth() const;
 
-	void generate(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colors);
+	void generate(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colours);
 
 private:
-	void draw(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colors, int depth, glm::vec3 p1, glm::vec3 p2, glm::vec3 color);
+	void draw(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colours, int depth, glm::vec3 p1, glm::vec3 p2, glm::vec3 colour);
 
 	int depth;
 };

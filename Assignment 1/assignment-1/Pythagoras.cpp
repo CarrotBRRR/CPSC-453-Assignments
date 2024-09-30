@@ -2,6 +2,7 @@
 #include "Pythagoras.h"
 #include <iostream>
 #include <glm/glm.hpp>
+#include <cmath>
 
 Pythagoras::Pythagoras(int depth) : depth(depth) {}
 
@@ -13,66 +14,60 @@ int Pythagoras::getDepth() const {
 	return depth;
 }
 
-void Pythagoras::generate(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colors) {
+void Pythagoras::generate(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colours) {
 	vertices.clear();
-	colors.clear();
+	colours.clear();
 
 	// Define the initial square with four corners
-	glm::vec3 p1(-0.5f, -0.5f, 1.f);
-	glm::vec3 p2(0.5f, -0.5f, 1.f);
-	glm::vec3 p3(0.5f, 0.5f, 1.f);
-	glm::vec3 p4(-0.5f, 0.5f, 1.f);
+	glm::vec3 p1(-0.25f, -0.5f, 1.f);
+	glm::vec3 p2(0.25f, -0.5f, 1.f);
+	glm::vec3 p3(0.25f, 0.0f, 1.f);
+	glm::vec3 p4(-0.25f, 0.0f, 1.f);
 
-	// Define the base color for the initial square
-	glm::vec3 base_color(0.5f, 0.5f, 0.5f);
+	// Define the base colour for the initial square
+	glm::vec3 colour(0.5f, 0.5f, 0.5f);
 
 	// Call the draw function to recursively generate the Pythagoras Tree
-	draw(vertices, colors, this->depth, p1, p2, p3, p4, base_color);
+	draw(vertices, colours, this->depth, p1, p2, p3, p4, colour);
 }
 
-void Pythagoras::draw(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colors, int depth, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 p4, glm::vec3 color) {
+void Pythagoras::draw(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colours, int depth, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 p4, glm::vec3 colour) {
 	if (depth == 0) {
-		// Define two triangles for the square using GL_TRIANGLE_STRIP
+		// Draw the square
 		vertices.push_back(p1);
 		vertices.push_back(p2);
-		vertices.push_back(p4);
-
-		vertices.push_back(p4);
-		vertices.push_back(p2);
 		vertices.push_back(p3);
+		vertices.push_back(p4);
+		vertices.push_back(p1);
 
-		// Assign the same color for all vertices
-		for (int i = 0; i < 6; i++) {
-			colors.push_back(color);
-		}
+		colours.push_back(colour);
+		colours.push_back(colour);
+		colours.push_back(colour);
+		colours.push_back(colour);
+		colours.push_back(colour);
 	}
 	else {
-		// Calculate side length of the current square (hypotenuse for new squares)
-		glm::vec3 side = p2 - p1; // Vector from p1 to p2
-		float h = glm::length(side);  // Length of the base square side (hypotenuse)
-		float s = h / glm::sqrt(2.0f); // Calculate the new side length (s = h / √2)
+		// Find the midpoints of the top edge of the square
+		glm::vec3 mid = (p3 + p4) / 2.0f;
 
-		// Compute direction vectors for rotation
-		glm::vec3 dir = glm::normalize(side);
-		glm::vec3 rot_left(-dir.y, dir.x, 0.0f); // Perpendicular vector for the left square
-		glm::vec3 rot_right(dir.y, -dir.x, 0.0f); // Perpendicular vector for the right square
+		// Calculate new points for the right isosceles triangle
+		glm::vec3 direction = glm::normalize(p3 - p4);
+		glm::vec3 perp(-direction.y, direction.x, 0.0f);
 
-		// Calculate new points for the two smaller squares
-		glm::vec3 new_p1_left = p4 + rot_left * s;  // New top-left corner
-		glm::vec3 new_p2_left = p4;                  // Keep the top corner the same
-		glm::vec3 new_p3_left = new_p1_left + dir * s; // New bottom-left corner
-		glm::vec3 new_p4_left = new_p1_left + rot_left * s; // New bottom-right corner
+		// Height of the triangle
+		float length = glm::length(p3 - p4);
+		float height = length / sqrt(2.0f);
 
-		glm::vec3 new_p1_right = p3;                 // Keep the top corner the same
-		glm::vec3 new_p2_right = p3 + rot_right * s; // New top-right corner
-		glm::vec3 new_p3_right = new_p2_right + dir * s; // New bottom-right corner
-		glm::vec3 new_p4_right = p2 + rot_right * s; // New bottom-left corner
+		// Calculate the new points for the right isosceles triangle
+		glm::vec3 p5 = mid + (height / 2.0f) * perp;
 
-		glm::vec3 new_color(0.8f, 0.3f, 0.3f);  // Example color for recursive layers
+		// normal vector of p4 to p5
+		glm::vec3 normal = glm::normalize(glm::cross(p5 - p4, p5 - p3));
 
-		// Recursively draw the two smaller squares for left and right sides
-		draw(vertices, colors, depth - 1, p4, new_p1_left, new_p4_left, new_p3_left, new_color); // Left square
-		draw(vertices, colors, depth - 1, new_p1_right, p3, new_p2_right, new_p2_right, new_color); // Right square
+		glm::vec3 p6 = p5 + normal * height;
+		glm::vec3 p7 = p4 + normal * height;
+
+		draw(vertices, colours, depth - 1, p4, p5, p6, p7, colour);
 	}
 }
 

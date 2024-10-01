@@ -7,7 +7,9 @@
 class Sierpinski {
 private:
 	int depth = 0;
-	void draw(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colours, int depth, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3, glm::vec3 colour);
+	float step = depth;
+	void draw(std::vector<glm::vec3>& vertices, int depth, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3, glm::vec3 colour);
+	void generateColours(std::vector<glm::vec3>& colours, int depth);
 
 public:
 	// Constructor

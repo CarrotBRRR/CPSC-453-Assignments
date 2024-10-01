@@ -102,7 +102,7 @@ foreach(file ${files})
 	configure_file(${file} shaders/${name})
 endforeach()
 
-add_executable(${APP_NAME} ${SOURCES}   "assignment-1/Sierpinski.cpp" "assignment-1/Sierpinski.h" "assignment-1/Pythagoras.cpp" "assignment-1/Pythagoras.h" "assignment-1/Koch.cpp" "assignment-1/Koch.h" "assignment-1/Dragon.cpp" "assignment-1/Dragon.h")
+add_executable(${APP_NAME} ${SOURCES}   "assignment-1/Sierpinski.cpp" "assignment-1/Sierpinski.h" "assignment-1/Pythagoras.cpp" "assignment-1/Pythagoras.h" "assignment-1/Koch.cpp" "assignment-1/Koch.h" "assignment-1/Dragon.cpp" "assignment-1/Dragon.h" "assignment-1/Hilbert.cpp" "assignment-1/Hilbert.h")
 target_include_directories(${APP_NAME} PRIVATE ${INCLUDES})
 target_link_libraries(${APP_NAME} ${LIBRARIES})
 target_compile_definitions(${APP_NAME} PRIVATE ${DEFINITIONS})

@@ -14,6 +14,7 @@
 #include "Pythagoras.h"
 #include "Koch.h"
 #include "Dragon.h"
+#include "Hilbert.h"
 
 int level = 1;
 int display_mode = 0;
@@ -49,11 +50,11 @@ public:
 			std::cout << "Level: " << level << std::endl;
 		}
 		else if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-			display_mode = (((display_mode - 1) % 4) + 4) % 4;
+			display_mode = (((display_mode - 1) % 5) + 5) % 5;
 			std::cout << "Display Mode: " << display_mode << std::endl;
 		}
 		else if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
-			display_mode = (display_mode + 1) % 4;
+			display_mode = (display_mode + 1) % 5;
 			std::cout << "Display Mode: " << display_mode << std::endl;
 		}
 	}
@@ -85,6 +86,9 @@ int main() {
 
 	// Dragon curve
 	Dragon dragon(level);
+
+	// Hilbert curve
+	Hilbert hilbert(level);
 
 	// Draw Array Style
 	int draw_style = 0;
@@ -123,6 +127,12 @@ int main() {
 		case 3:
 			dragon.setDepth(level);
 			dragon.generate(cpuGeom.verts, cpuGeom.cols);
+			draw_style = GL_LINES;
+			break;
+
+		case 4:
+			hilbert.setDepth(level);
+			hilbert.generate(cpuGeom.verts, cpuGeom.cols);
 			draw_style = GL_LINES;
 			break;
 

@@ -14,7 +14,7 @@ public:
 	void generate(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colours);
 
 private:
-	void draw(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colours, int depth, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 p4, glm::vec3 colour);
+	void draw(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colours, glm::vec2 position, float size, float angle, int depth);
 
 	int depth;
 };

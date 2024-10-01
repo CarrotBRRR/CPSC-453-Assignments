@@ -1,4 +1,6 @@
 
+#define _USE_MATH_DEFINES
+
 #include "Pythagoras.h"
 #include <iostream>
 #include <glm/glm.hpp>
@@ -18,56 +20,67 @@ void Pythagoras::generate(std::vector<glm::vec3>& vertices, std::vector<glm::vec
 	vertices.clear();
 	colours.clear();
 
-	// Define the initial square with four corners
-	glm::vec3 p1(-0.25f, -0.5f, 1.f);
-	glm::vec3 p2(0.25f, -0.5f, 1.f);
-	glm::vec3 p3(0.25f, 0.0f, 1.f);
-	glm::vec3 p4(-0.25f, 0.0f, 1.f);
-
+	glm::vec2 p(-0.125f, -0.75f);
+	
 	// Define the base colour for the initial square
-	glm::vec3 colour(0.5f, 0.5f, 0.5f);
+	colours.push_back(glm::vec3(0.6f, 0.3f, 0.0f));
+	colours.push_back(glm::vec3(0.6f, 0.3f, 0.0f));
+	colours.push_back(glm::vec3(0.6f, 0.3f, 0.0f));
+	colours.push_back(glm::vec3(0.6f, 0.3f, 0.0f));
+	colours.push_back(glm::vec3(0.6f, 0.3f, 0.0f));
+	colours.push_back(glm::vec3(0.6f, 0.3f, 0.0f));
 
 	// Call the draw function to recursively generate the Pythagoras Tree
-	draw(vertices, colours, this->depth, p1, p2, p3, p4, colour);
+	draw(vertices, colours, p, 0.25f, 0.0, this->depth);
 }
 
-void Pythagoras::draw(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colours, int depth, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 p4, glm::vec3 colour) {
+void Pythagoras::draw(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& colours, glm::vec2 position, float size, float angle, int depth) {
 	if (depth == 0) {
-		// Draw the square
-		vertices.push_back(p1);
-		vertices.push_back(p2);
-		vertices.push_back(p3);
-		vertices.push_back(p4);
-		vertices.push_back(p1);
+		glm::vec2 p0 = position; // bottom left
+		glm::vec2 p1 = p0 + glm::vec2(size * std::cos(angle), size * std::sin(angle)); // bottom right
+		glm::vec2 p2 = p1 + glm::vec2(-size * std::sin(angle), size * std::cos(angle)); // top right
+		glm::vec2 p3 = p0 + glm::vec2(-size * std::sin(angle), size * std::cos(angle)); // top left
 
-		colours.push_back(colour);
-		colours.push_back(colour);
-		colours.push_back(colour);
-		colours.push_back(colour);
-		colours.push_back(colour);
+		vertices.push_back(glm::vec3(p0, 0.0f));
+		vertices.push_back(glm::vec3(p1, 0.0f));
+		vertices.push_back(glm::vec3(p2, 0.0f));
+		vertices.push_back(glm::vec3(p0, 0.0f));
+		vertices.push_back(glm::vec3(p2, 0.0f));
+		vertices.push_back(glm::vec3(p3, 0.0f));
+
+		for (int i = 0; i < 6; i++) {
+			colours.push_back(glm::vec3(0.0f, 0.5f, 0.0f));
+		}
 	}
 	else {
-		// Find the midpoints of the top edge of the square
-		glm::vec3 mid = (p3 + p4) / 2.0f;
+		glm::vec2 p0 = position;
+		glm::vec2 p1 = p0 + glm::vec2(size * std::cos(angle), size * std::sin(angle));
+		glm::vec2 p2 = p1 + glm::vec2(-size * std::sin(angle), size * std::cos(angle));
+		glm::vec2 p3 = p0 + glm::vec2(-size * std::sin(angle), size * std::cos(angle));
 
-		// Calculate new points for the right isosceles triangle
-		glm::vec3 direction = glm::normalize(p3 - p4);
-		glm::vec3 perp(-direction.y, direction.x, 0.0f);
+		vertices.push_back(glm::vec3(p0, 0.0f));
+		vertices.push_back(glm::vec3(p1, 0.0f));
+		vertices.push_back(glm::vec3(p2, 0.0f));
 
-		// Height of the triangle
-		float length = glm::length(p3 - p4);
-		float height = length / sqrt(2.0f);
+		vertices.push_back(glm::vec3(p0, 0.0f));
+		vertices.push_back(glm::vec3(p2, 0.0f));
+		vertices.push_back(glm::vec3(p3, 0.0f));
 
-		// Calculate the new points for the right isosceles triangle
-		glm::vec3 p5 = mid + (height / 2.0f) * perp;
+		for (int i = 0; i < 6; i++) {
+			colours.push_back(glm::vec3(0.0f, 0.5f, 0.0f));
+		}
 
-		// normal vector of p4 to p5
-		glm::vec3 normal = glm::normalize(glm::cross(p5 - p4, p5 - p3));
+		float newSize = size / sqrt(2.0f); // size of next square
 
-		glm::vec3 p6 = p5 + normal * height;
-		glm::vec3 p7 = p4 + normal * height;
+		float left_angle = angle + M_PI_4;
+		glm::vec2 left_position = p3;
+		draw(vertices, colours, left_position, newSize, left_angle, depth - 1);
 
-		draw(vertices, colours, depth - 1, p4, p5, p6, p7, colour);
+		float right_angle = angle - M_PI_4;
+		glm::vec2 right_position = p2;
+		right_position -= glm::vec2(newSize * std::cos(right_angle), newSize * std::sin(right_angle));
+
+		draw(vertices, colours, right_position, newSize, right_angle, depth - 1);
 	}
 }
 

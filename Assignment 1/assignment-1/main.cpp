@@ -115,7 +115,7 @@ int main() {
 		case 1:
 			pythagoras.setDepth(level);
 			pythagoras.generate(cpuGeom.verts, cpuGeom.cols);
-			draw_style = GL_TRIANGLE_STRIP;
+			draw_style = GL_TRIANGLES;
 			break;
 
 		case 2:

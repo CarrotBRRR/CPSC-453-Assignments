@@ -50,11 +50,11 @@ public:
 			std::cout << "Level: " << level << std::endl;
 		}
 		else if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-			display_mode = (((display_mode - 1) % 5) + 5) % 5;
+			display_mode = (((display_mode - 1) % 4) + 4) % 4;
 			std::cout << "Display Mode: " << display_mode << std::endl;
 		}
 		else if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
-			display_mode = (display_mode + 1) % 5;
+			display_mode = (display_mode + 1) % 4;
 			std::cout << "Display Mode: " << display_mode << std::endl;
 		}
 	}

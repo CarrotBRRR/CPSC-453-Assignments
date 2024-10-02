@@ -7,6 +7,7 @@
 - `Right Arrow`: Change View
 
 ## Notes:
+- I changed the name of the project to assignment-1.exe
 - Depth starts at 1
 - Max Depth is 8
 - 0 Depth is the original shape (e.g. A Triangle for Koch Snowflake)

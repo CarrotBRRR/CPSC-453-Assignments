@@ -44,6 +44,7 @@ void Pythagoras::draw(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& 
 		vertices.push_back(glm::vec3(p0, 0.0f));
 		vertices.push_back(glm::vec3(p1, 0.0f));
 		vertices.push_back(glm::vec3(p2, 0.0f));
+
 		vertices.push_back(glm::vec3(p0, 0.0f));
 		vertices.push_back(glm::vec3(p2, 0.0f));
 		vertices.push_back(glm::vec3(p3, 0.0f));
@@ -77,9 +78,7 @@ void Pythagoras::draw(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& 
 		draw(vertices, colours, left_position, newSize, left_angle, depth - 1);
 
 		float right_angle = angle - M_PI_4;
-		glm::vec2 right_position = p2;
-		right_position -= glm::vec2(newSize * std::cos(right_angle), newSize * std::sin(right_angle));
-
+		glm::vec2 right_position = p2 - glm::vec2(newSize * std::cos(right_angle), newSize * std::sin(right_angle));
 		draw(vertices, colours, right_position, newSize, right_angle, depth - 1);
 	}
 }

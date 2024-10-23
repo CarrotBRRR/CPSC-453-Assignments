@@ -8,13 +8,18 @@
 
 
 ShaderProgram::ShaderProgram(const std::string& vertexPath, const std::string& fragmentPath)
-	: programID()
-	, vertex(vertexPath, GL_VERTEX_SHADER)
+	: vertex(vertexPath, GL_VERTEX_SHADER)
 	, fragment(fragmentPath, GL_FRAGMENT_SHADER)
 {
+	shaderProgram_id = glCreateProgram();
+
 	attach(*this, vertex);
 	attach(*this, fragment);
 	glLinkProgram(programID);
+
+	vertex.deleteShader();
+	fragment.deleteShader();
+
 
 	if (!checkAndLogLinkSuccess()) {
 		glDeleteProgram(programID);

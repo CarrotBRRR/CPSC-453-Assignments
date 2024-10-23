@@ -25,10 +25,14 @@ public:
 	bool recompile();
 	void use() const { glUseProgram(programID); }
 
+	void deleteProgram() { glDeleteProgram(programID); }
+
 	void friend attach(ShaderProgram& sp, Shader& s);
 
+	unsigned int getID() const { return programID; }
+
 private:
-	ShaderProgramHandle programID;
+	unsigned int programID;
 
 	Shader vertex;
 	Shader fragment;

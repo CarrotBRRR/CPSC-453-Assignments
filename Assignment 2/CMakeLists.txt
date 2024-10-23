@@ -110,7 +110,7 @@ configure_file(textures/diamond.png textures/diamond.png COPYONLY)
 configure_file(textures/fire.png textures/fire.png COPYONLY)
 
 
-add_executable(${APP_NAME} ${SOURCES}   "assignment-2/GameObject.h" "assignment-2/Game.h" "assignment-2/Player.h" "assignment-2/Pickup.h" "assignment-2/Input.h" "assignment-2/Sprite.h" "assignment-2/Game.cpp" "assignment-2/Graphics.h" "assignment-2/Rotation.h" "assignment-2/GameObject.cpp")
+add_executable(${APP_NAME} ${SOURCES}   "assignment-2/GameObject.h" "assignment-2/Game.h" "assignment-2/Player.h" "assignment-2/Pickup.h" "assignment-2/Input.h" "assignment-2/Sprite.h" "assignment-2/Game.cpp" "assignment-2/Graphics.h" "assignment-2/Rotation.h" "assignment-2/GameObject.cpp" "assignment-2/Graphics.cpp")
 target_include_directories(${APP_NAME} PRIVATE ${INCLUDES})
 target_link_libraries(${APP_NAME} ${LIBRARIES})
 target_compile_definitions(${APP_NAME} PRIVATE ${DEFINITIONS})

@@ -34,9 +34,7 @@ public:
 	void resetGraphics();
 
 private:
-	const int WIDTH = 800;
-	const int HEIGHT = 800;
-
+	const glm::vec2 SCR_DIM = { 800, 800 };
 
 	unsigned int TBO; // transform buffer object id
 	unsigned int IBO; // texture id buffer object id
@@ -63,6 +61,7 @@ private:
 	int n_sprites = 0; // Number of sprites
 
 	std::vector<glm::mat4> transforms; // sprite transforms
+	std::vector<glm::int32> texture_ids; // sprite texture ids
 
 	Window* window = nullptr;
 	ShaderProgram* shader_program = nullptr;
@@ -76,6 +75,11 @@ private:
 	bool win = false;
 	int score = 0;
 
+	void sendData2GPU();
+
+	void updateSprites();
+
+	void updateGUI();
 };
 
 #endif // !GRAPHICS_H

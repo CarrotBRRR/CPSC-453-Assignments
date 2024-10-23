@@ -10,8 +10,8 @@ public:
 
 	virtual void update(float dtime);
 
-	void mouseInput(float xpos, float ypos);
-	void keyboardInput(float speed);
+	void steerInput(float xpos, float ypos);
+	void moveInput(float speed);
 
 	bool moved();
 

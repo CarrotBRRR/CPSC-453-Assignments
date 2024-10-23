@@ -1,6 +1,11 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+#include <GLFW/glfw3.h>
+
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 800
+
 class Player;
 
 class Input {
@@ -14,8 +19,8 @@ public:
 private:
 	Player* player = nullptr;
 
-	int WINDOW_HEIGHT = 800;
-	int WINDOW_WIDTH = 800;
+	int 
+	int 
 };
 
 #endif 

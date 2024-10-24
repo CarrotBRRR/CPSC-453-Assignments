@@ -26,8 +26,6 @@ public:
 
 	void friend attach(ShaderProgram& sp, Shader& s);
 
-	void deleteShader() { glDeleteShader(shaderID); };
-
 private:
 	ShaderHandle shaderID;
 	GLenum type;

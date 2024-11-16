@@ -37,7 +37,7 @@ struct Parameters {
 
 	int scene = 0; // 0: default, 1: Bezier, 2: B-Spline
 
-	
+	int view3D = false;
 };
 
 static Parameters params;
@@ -61,6 +61,9 @@ public:
 			} else if (key == GLFW_KEY_2) {
 				params.scene = 2;
 			}
+
+			else if (key == GLFW_KEY_V) {
+				params.view3D = !params.view3D;
 		}
 	}
 
@@ -91,7 +94,7 @@ public:
 	}
 
 	virtual void cursorPosCallback(double xpos, double ypos) override {
-		params.cursor_pos = convertScreenToWorld(xpos, ypos);
+		params.cursor_pos = calculateMousePos(xpos, ypos);
 
 		if (params.select != -1) {
 			params.cp_colours_vector[params.select] = { 0.f, 1.f, 0.f };
@@ -111,7 +114,7 @@ public:
 	}
 
 private:
-	glm::vec3 convertScreenToWorld(double xpos, double ypos) {
+	glm::vec3 calculateMousePos(double xpos, double ypos) {
 		glm::vec4 cursor = {xpos, ypos, 0.f, 1.f};
 
 		glm::mat4 pixel_centering_T = glm::translate(glm::mat4(1.f), glm::vec3(0.5f, 0.5f, 0.f));
@@ -175,7 +178,7 @@ public:
 		options[1] = "Option 2";
 		options[2] = "Option 3";
 
-		// Initialize color (white by default)
+		// Initialize color (black by default)
 		colorValue[0] = 0.f; // R
 		colorValue[1] = 0.f; // G
 		colorValue[2] = 0.f; // B
@@ -258,7 +261,7 @@ glm::vec3 deCasteljau(const std::vector<glm::vec3>& controlPoints, float t) {
 	return temp[0];
 }
 
-std::vector<glm::vec3> quadraticBSpline(const std::vector<glm::vec3>& controlPoints, int iterations = 10) {
+std::vector<glm::vec3> quadraticBSpline(const std::vector<glm::vec3>& controlPoints, int iterations = 15) {
 	if (controlPoints.size() < 3) {
 		return std::vector<glm::vec3>{glm::vec3(0, 0, 0)};
 
@@ -283,7 +286,7 @@ int main() {
 	Log::debug("Starting main");
 
 	glfwInit();
-	Window window(800, 800, "CPSC 453: Bézier Curve Example");
+	Window window(800, 800, "CPSC 453: Assignment 3");
 	Panel panel(window.getGLFWwindow());
 
 	auto curve_editor_callback = std::make_shared<CurveEditorCallBack>();

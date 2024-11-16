@@ -26,11 +26,18 @@ struct Parameters {
 	glm::vec3 cursor_pos = { 0.f,0.f,0.f };
 	glm::vec2 window_size = { 0.f,0.f };
 
+	glm::vec3 cp_point_colour = { 1.f, 0.f, 0.f }; // Red color for control points
+
 	std::vector<glm::vec3> cp_positions_vector = {
 		{0.f, 0.f, 0.f},
 	};
+	std::vector<glm::vec3> cp_colours_vector = std::vector<glm::vec3>(cp_positions_vector.size(), cp_point_colour);
 
-	int select = -1;
+	int select = -1; // Selected Control Point
+
+	int scene = 0; // 0: default, 1: Bezier, 2: B-Spline
+
+	
 };
 
 static Parameters params;
@@ -49,6 +56,10 @@ public:
 				params.cp_positions_vector = std::vector<glm::vec3>{
 					{0.f, 0.f, 0.f},
 				};
+			} else if (key == GLFW_KEY_1) {
+				params.scene = 1;
+			} else if (key == GLFW_KEY_2) {
+				params.scene = 2;
 			}
 		}
 	}
@@ -60,15 +71,20 @@ public:
 		
 			if (params.select == -1) {
 				params.cp_positions_vector.push_back(params.cursor_pos);
+				params.cp_colours_vector.push_back(params.cp_point_colour);
 			}
 
 		} else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+			if (params.select != -1) {
+				params.cp_colours_vector[params.select] = { 1.f, 0.f, 0.f };
+			}
 			params.select = -1;
 
 		} else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
 			int selection = selectControlPoint(params.cursor_pos, POINT_THRESHOLD);
-			if (selection != -1 && params.cp_positions_vector.size() > 1) {
+			if (selection != -1) {
 				params.cp_positions_vector.erase(params.cp_positions_vector.begin() + selection);
+				params.cp_colours_vector.erase(params.cp_colours_vector.begin() + selection);
 			}
 			params.select = -1;
 		}
@@ -76,10 +92,12 @@ public:
 
 	virtual void cursorPosCallback(double xpos, double ypos) override {
 		params.cursor_pos = convertScreenToWorld(xpos, ypos);
-		Log::info("CursorPosCallback: xpos={}, ypos={}", params.cursor_pos.x, params.cursor_pos.y);
+
 		if (params.select != -1) {
+			params.cp_colours_vector[params.select] = { 0.f, 1.f, 0.f };
 			params.cp_positions_vector[params.select] = params.cursor_pos;
 		}
+		// Log::info("CursorPosCallback: xpos={}, ypos={}", params.cursor_pos.x, params.cursor_pos.y);
 	}
 
 	virtual void scrollCallback(double xoffset, double yoffset) override {
@@ -228,6 +246,9 @@ private:
 };
 
 glm::vec3 deCasteljau(const std::vector<glm::vec3>& controlPoints, float t) {
+	if (controlPoints.size() < 1) {
+		return glm::vec3(0,0,0);
+	}
 	std::vector<glm::vec3> temp = controlPoints;
 	for (int j = 1; j < int(temp.size()); ++j) {
 		for (int i = 0; i < int(temp.size()) - j; ++i) {
@@ -235,6 +256,27 @@ glm::vec3 deCasteljau(const std::vector<glm::vec3>& controlPoints, float t) {
 		}
 	}
 	return temp[0];
+}
+
+std::vector<glm::vec3> quadraticBSpline(const std::vector<glm::vec3>& controlPoints, int iterations = 10) {
+	if (controlPoints.size() < 3) {
+		return std::vector<glm::vec3>{glm::vec3(0, 0, 0)};
+
+	} else if (iterations == 0) {
+		return controlPoints;
+	}
+
+	std::vector<glm::vec3> temp = controlPoints;
+
+    std::vector<glm::vec3> curve_points;
+    for (int i = 0; i < int(temp.size() - 2); i++) {
+        curve_points.push_back((0.75f) * temp[i] + (0.25f) * temp[i + 1]);
+        curve_points.push_back((0.25f) * temp[i] + (0.75f) * temp[i + 1]);
+    }
+    curve_points.push_back((0.75f) * temp[temp.size() - 2] + (0.25f) * temp[temp.size() - 1]);
+    curve_points.push_back((0.25f) * temp[temp.size() - 2] + (0.75f) * temp[temp.size() - 1]);
+
+    return quadraticBSpline(curve_points, iterations - 1);
 }
 
 int main() {
@@ -254,33 +296,22 @@ int main() {
 
 	ShaderProgram shader_program_default("shaders/test.vert", "shaders/test.frag");
 
-	glm::vec3 cp_point_colour = { 1.f, 0.f, 0.f }; // Red color for control points
-
 	// Set up control points in GPU
-	CPU_Geometry cp_point_cpu;
-	cp_point_cpu.verts = params.cp_positions_vector;
-	cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
+	CPU_Geometry cp_cpu;
+	cp_cpu.verts = params.cp_positions_vector;
+	cp_cpu.cols = params.cp_colours_vector;
 
-	GPU_Geometry cp_point_gpu;
-	cp_point_gpu.setVerts(cp_point_cpu.verts);
-	cp_point_gpu.setCols(cp_point_cpu.cols);
+	GPU_Geometry cp_gpu;
+	cp_gpu.setVerts(cp_cpu.verts);
+	cp_gpu.setCols(cp_cpu.cols);
 
-
-	// Generate Bézier curve points
-	std::vector<glm::vec3> bezierCurvePoints;
+	// Curve points
+	std::vector<glm::vec3> curve_points;
 	int segments = 100;
-	for (int i = 0; i <= segments; ++i) {
-		float t = i / (float)segments;
-		bezierCurvePoints.push_back(deCasteljau(params.cp_positions_vector, t));
-	}
 
-	CPU_Geometry bezier_cpu;
-	bezier_cpu.verts = bezierCurvePoints;
-	bezier_cpu.cols = std::vector<glm::vec3>(bezier_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
-
-	GPU_Geometry bezier_gpu;
-	bezier_gpu.setVerts(bezier_cpu.verts);
-	bezier_gpu.setCols(bezier_cpu.cols);
+	// Set up curve in GPU
+	CPU_Geometry curve_cpu;
+	GPU_Geometry curve_gpu;
 
 	while (!window.shouldClose()) {
 		glfwPollEvents();
@@ -296,33 +327,61 @@ int main() {
 		shader_program_default.use();
 
 		// Render control points
-		cp_point_gpu.bind();
+		cp_gpu.bind();
 		glPointSize(15.f);
-		glDrawArrays(GL_POINTS, 0, cp_point_cpu.verts.size());
+		glDrawArrays(GL_POINTS, 0, cp_cpu.verts.size());
 
-		// Render Bézier curve
-		bezier_gpu.bind();
-		glDrawArrays(GL_LINE_STRIP, 0, bezier_cpu.verts.size());
+		// Calculate points on the curve
+		curve_cpu.verts = curve_points;
+		switch (params.scene) {
+		case 1: // Bezier
+
+			curve_cpu.cols = std::vector<glm::vec3>(curve_cpu.verts.size(), glm::vec3(0, 0, 1)); // Blue color for Bézier curve
+
+			curve_points.clear();
+			for (int i = 0; i <= segments; ++i) {
+				float t = i / (float)segments;
+				curve_points.push_back(deCasteljau(params.cp_positions_vector, t));
+			}
+
+			break;
+
+		case 2: // B-Spline
+			curve_cpu.cols = std::vector<glm::vec3>(curve_cpu.verts.size(), glm::vec3(0.5, 0, 1)); // Purple color for B-Spline curve
+
+			curve_points.clear();
+			curve_points = quadraticBSpline(params.cp_positions_vector);
+
+			if (params.cp_positions_vector.size() > 2) {
+				std::reverse(curve_points.begin(), curve_points.end());
+				curve_points.push_back(params.cp_positions_vector.front());
+				std::reverse(curve_points.begin(), curve_points.end());
+				curve_points.push_back(params.cp_positions_vector.back());
+			}
+			
+			break;
+
+		default:
+			break;
+		}
+
+		// Render curve
+		curve_gpu.setVerts(curve_points);
+		curve_gpu.setCols(curve_cpu.cols);
+
+		curve_gpu.bind();
+		glDrawArrays(GL_LINE_STRIP, 0, curve_cpu.verts.size());
 
 		glDisable(GL_FRAMEBUFFER_SRGB);
 		panel.render();
 		window.swapBuffers();
 
-		// Update Bézier curve points
-		bezierCurvePoints.clear();
-		for (int i = 0; i <= segments; ++i) {
-			float t = i / (float)segments;
-			bezierCurvePoints.push_back(deCasteljau(params.cp_positions_vector, t));
-		}
-		bezier_gpu.setVerts(bezierCurvePoints);
-		bezier_gpu.setCols(std::vector<glm::vec3>(bezierCurvePoints.size(), glm::vec3(0, 0, 1)));
-
 		// Update control points
-		cp_point_cpu.verts = params.cp_positions_vector;
-		cp_point_cpu.cols = std::vector<glm::vec3>(cp_point_cpu.verts.size(), cp_point_colour);
+		cp_cpu.verts = params.cp_positions_vector;
+		cp_cpu.cols = params.cp_colours_vector;
 
-		cp_point_gpu.setVerts(cp_point_cpu.verts);
-		cp_point_gpu.setCols(cp_point_cpu.cols);
+		cp_gpu.setVerts(cp_cpu.verts);
+		cp_gpu.setCols(cp_cpu.cols);
 	}
 
 	glfwTerminate();

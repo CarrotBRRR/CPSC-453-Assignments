@@ -63,7 +63,8 @@ public:
 			}
 
 			else if (key == GLFW_KEY_V) {
-				params.view3D = !params.view3D;
+				params.view3D = true;
+			}
 		}
 	}
 

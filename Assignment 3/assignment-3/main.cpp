@@ -27,14 +27,15 @@ struct Parameters {
 	glm::vec2 window_size = { 0.f,0.f };
 
 	glm::vec3 cp_point_colour = { 1.f, 0.f, 0.f }; // Red color for control points
+	glm::vec3 cp_line_colour = { 0.f, 1.f, 0.f }; // Blue color for control point lines
 
 	std::vector<glm::vec3> cp_positions_vector = {
 		{0.f, 0.f, 0.f},
 	};
 	std::vector<glm::vec3> cp_colours_vector = std::vector<glm::vec3>(cp_positions_vector.size(), cp_point_colour);
+	std::vector<glm::vec3> cp_lines_colours_vector = std::vector<glm::vec3>(cp_positions_vector.size(), cp_line_colour);
 
 	int select = -1; // Selected Control Point
-
 	int scene = 0; // 0: default, 1: Bezier, 2: B-Spline
 
 	int view3D = false;
@@ -49,14 +50,8 @@ public:
 	virtual void keyCallback(int key, int scancode, int action, int mods) override {
 		Log::info("KeyCallback: key={}, action={}", key, action);
 		if (action == GLFW_PRESS) {
-			if (key == GLFW_KEY_ESCAPE) {
-				glfwSetWindowShouldClose(glfwGetCurrentContext(), GLFW_TRUE);
-			}
-			else if (key == GLFW_KEY_R) {
-				params.cp_positions_vector = std::vector<glm::vec3>{
-					{0.f, 0.f, 0.f},
-				};
-			} else if (key == GLFW_KEY_1) {
+
+			if (key == GLFW_KEY_1) {
 				params.scene = 1;
 			} else if (key == GLFW_KEY_2) {
 				params.scene = 2;
@@ -76,6 +71,7 @@ public:
 			if (params.select == -1) {
 				params.cp_positions_vector.push_back(params.cursor_pos);
 				params.cp_colours_vector.push_back(params.cp_point_colour);
+				params.cp_lines_colours_vector.push_back(params.cp_line_colour);
 			}
 
 		} else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
@@ -146,14 +142,28 @@ private:
 	}
 };
 
-// Can swap the callback instead of maintaining a state machine
-/*
 class TurnTable3DViewerCallBack : public CallbackInterface {
 
 public:
 	TurnTable3DViewerCallBack() {}
 
-	virtual void keyCallback(int key, int scancode, int action, int mods) {}
+	virtual void keyCallback(int key, int scancode, int action, int mods) override {
+		Log::info("KeyCallback: key={}, action={}", key, action);
+		if (action == GLFW_PRESS) {
+
+			if (key == GLFW_KEY_1) {
+				params.scene = 1;
+			}
+			else if (key == GLFW_KEY_2) {
+				params.scene = 2;
+			}
+
+			else if (key == GLFW_KEY_V) {
+				params.view3D = false;
+			}
+		}
+	}
+
 	virtual void mouseButtonCallback(int button, int action, int mods) {}
 	virtual void cursorPosCallback(double xpos, double ypos) {}
 	virtual void scrollCallback(double xoffset, double yoffset) {}
@@ -165,7 +175,6 @@ public:
 private:
 
 };
-*/
 
 class CurveEditorPanelRenderer : public PanelRendererInterface {
 public:
@@ -309,6 +318,15 @@ int main() {
 	cp_gpu.setVerts(cp_cpu.verts);
 	cp_gpu.setCols(cp_cpu.cols);
 
+	// Contol point lines
+	CPU_Geometry cp_lines_cpu;
+	cp_lines_cpu.verts = params.cp_positions_vector;
+	cp_lines_cpu.cols = params.cp_lines_colours_vector;
+
+	GPU_Geometry cp_lines_gpu;
+	cp_lines_gpu.setVerts(cp_lines_cpu.verts);
+	cp_lines_gpu.setCols(cp_lines_cpu.cols);
+
 	// Curve points
 	std::vector<glm::vec3> curve_points;
 	int segments = 100;
@@ -318,6 +336,13 @@ int main() {
 	GPU_Geometry curve_gpu;
 
 	while (!window.shouldClose()) {
+		if (params.view3D) {
+			window.setCallbacks(std::make_shared<TurnTable3DViewerCallBack>());
+		}
+		else {
+			window.setCallbacks(curve_editor_callback);
+		}
+
 		glfwPollEvents();
 		glm::vec3 background_colour = curve_editor_panel_renderer->getColor();
 
@@ -329,11 +354,6 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		shader_program_default.use();
-
-		// Render control points
-		cp_gpu.bind();
-		glPointSize(15.f);
-		glDrawArrays(GL_POINTS, 0, cp_cpu.verts.size());
 
 		// Calculate points on the curve
 		curve_cpu.verts = curve_points;
@@ -351,7 +371,7 @@ int main() {
 			break;
 
 		case 2: // B-Spline
-			curve_cpu.cols = std::vector<glm::vec3>(curve_cpu.verts.size(), glm::vec3(0.5, 0, 1)); // Purple color for B-Spline curve
+			curve_cpu.cols = std::vector<glm::vec3>(curve_cpu.verts.size(), glm::vec3(0.25, 0, 1)); // Purple color for B-Spline curve
 
 			curve_points.clear();
 			curve_points = quadraticBSpline(params.cp_positions_vector);
@@ -369,6 +389,17 @@ int main() {
 			break;
 		}
 
+		// Render control points
+		cp_cpu.verts = params.cp_positions_vector;
+		cp_cpu.cols = params.cp_colours_vector;
+
+		cp_gpu.setVerts(cp_cpu.verts);
+		cp_gpu.setCols(cp_cpu.cols);
+
+		cp_gpu.bind();
+		glPointSize(15.f);
+		glDrawArrays(GL_POINTS, 0, cp_cpu.verts.size());
+
 		// Render curve
 		curve_gpu.setVerts(curve_points);
 		curve_gpu.setCols(curve_cpu.cols);
@@ -376,16 +407,20 @@ int main() {
 		curve_gpu.bind();
 		glDrawArrays(GL_LINE_STRIP, 0, curve_cpu.verts.size());
 
+		// Render control point lines
+		cp_lines_cpu.verts = params.cp_positions_vector;
+		cp_lines_cpu.cols = params.cp_lines_colours_vector;
+
+		cp_lines_gpu.setVerts(cp_lines_cpu.verts);
+		cp_lines_gpu.setCols(cp_lines_cpu.cols);
+
+		cp_lines_gpu.bind();
+		glDrawArrays(GL_LINE_STRIP, 0, cp_lines_cpu.verts.size());
+
+		//
 		glDisable(GL_FRAMEBUFFER_SRGB);
 		panel.render();
 		window.swapBuffers();
-
-		// Update control points
-		cp_cpu.verts = params.cp_positions_vector;
-		cp_cpu.cols = params.cp_colours_vector;
-
-		cp_gpu.setVerts(cp_cpu.verts);
-		cp_gpu.setCols(cp_cpu.cols);
 	}
 
 	glfwTerminate();

@@ -26,6 +26,17 @@
 #include "cmath"
 
 #define POINT_THRESHOLD 0.075f
+#define CAMERA_DEFAULT_DISTANCE 1.f
+
+#define VERTICAL_SENSITIVITY 0.1f
+#define HORIZONTAL_SENSITIVITY 0.15f
+
+struct Camera {
+	float yaw = M_PI_2;
+	float pitch = 0.0f;
+	glm::vec3 position = glm::vec3(0.0f, 0.0f, CAMERA_DEFAULT_DISTANCE);
+	glm::vec3 last_position = glm::vec3(0.0f, 0.0f, CAMERA_DEFAULT_DISTANCE);
+};
 
 struct Parameters {
 	glm::vec3 cursor_pos = { 0.f,0.f,0.f };
@@ -49,15 +60,14 @@ struct Parameters {
 	bool render_cp_lines = true;
 
 	// Camera parameters
+	Camera cam;
+
 	bool start_drag = false;
 	bool dragging_camera = false;
 	glm::vec3 drag_start = { 0.f, 0.f, 0.f };
 
-	glm::vec3 last_camera_position = glm::vec3(0.0f, 0.0f, 2.415f);
-	glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 2.415f);
-
 	glm::mat4 projection = glm::perspective(
-		glm::radians(45.0f),
+		glm::radians(45.f),
 		window_size.x / window_size.y,
 		0.1f, 100.0f);
 
@@ -180,7 +190,9 @@ public:
 			}
 
 			else if (key == GLFW_KEY_R) {
-				params.camera_position = glm::vec3(0.0f, 0.0f, 2.415f);
+				params.cam.yaw = M_PI_2;
+				params.cam.pitch = 0.0f;
+				params.cam.position = glm::vec3(0.0f, 0.0f, CAMERA_DEFAULT_DISTANCE);
 			}
 		}
 	}
@@ -196,47 +208,52 @@ public:
 
 	}
 	virtual void cursorPosCallback(double xpos, double ypos) {
+		// Calculate the new mouse position in your chosen coordinate system
 		params.cursor_pos = calculateMousePos(xpos, ypos);
 
-		if(params.start_drag) {
+		// Start dragging: initialize necessary parameters (first time mouse press)
+		if (params.start_drag) {
 			params.drag_start = params.cursor_pos;
-			params.last_camera_position = params.camera_position;
+			params.cam.last_position = params.cam.position;
 			params.start_drag = false;
-
-			Log::info("CursorPosCallback: Drag_X={}, Drag_Y={}", params.drag_start.x, params.drag_start.y);
 		}
+
 		if (params.dragging_camera) {
+			// Calculate displacement
 			glm::vec3 displacement = (params.cursor_pos - params.drag_start) * -0.1f;
 
-			Log::info("CursorPosCallback: Displacement_X={}, Displacement_Y={}", displacement.x, displacement.y);
+			// Calculate new yaw and pitch based on displacement
+			float yaw_offset = -displacement.x * HORIZONTAL_SENSITIVITY;
+			float pitch_offset = clampDisplacement(displacement.y) * VERTICAL_SENSITIVITY;
 
-			// get distance to origin from camera
-			glm::vec3 to_origin = glm::normalize(params.last_camera_position);
-			float radius = glm::length(params.last_camera_position);
+			// Update yaw and pitch
+			params.cam.yaw += yaw_offset;
+			params.cam.pitch += pitch_offset;
 
-			// Rotation Angles (Yaw and Pitch, in Radians) with relation to displacement
-			float yaw = displacement.x * 6 * M_PI;
-			float pitch = -displacement.y * 6 * M_PI;
+			// Clamp pitch to avoid gimbal lock
+			if (params.cam.pitch > ( M_PI_2 - 0.05f)) params.cam.pitch = (M_PI_2 - 0.05f);
+			if (params.cam.pitch < (-M_PI_2 + 0.05f)) params.cam.pitch = (-M_PI_2 + 0.05f);
 
-			// Rotation Matrix
-			glm::mat4 yaw_rotation = glm::rotate(glm::mat4(1.0f), yaw, glm::vec3(0.0f, 1.0f, 0.0f)); // Y-axis
-			glm::mat4 pitch_rotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3(1.0f, 0.0f, 0.0f)); // X-axis
+			// Update camera direction (front vector) based on new yaw and pitch
+			glm::vec3 front;
+			front.x = cos(params.cam.yaw) * cos(params.cam.pitch);
+			front.y = sin(params.cam.pitch);
+			front.z = sin(params.cam.yaw) * cos(params.cam.pitch);
 
-			// Combine rotations
-			glm::mat4 rotation =  yaw_rotation * pitch_rotation;
+			// Normalize the front vector (optional since it's being recomputed)
+			front = glm::normalize(front);
 
-			glm::vec4 new_position = rotation * glm::vec4(params.last_camera_position, 1.0f);
-
-			params.camera_position = glm::normalize(glm::vec3(new_position)) * radius;
-
+			// Update the camera position (this can be done by moving the camera along the front vector)
+			float radius = glm::length(params.cam.last_position); // Distance from origin
+			params.cam.position = front * radius;
 		}
 	}
 	virtual void scrollCallback(double xoffset, double yoffset) {
 		// get vector to origin from camera
-		glm::vec3 to_origin = glm::normalize(params.camera_position);
+		glm::vec3 to_origin = glm::normalize(params.cam.position);
 
 		// move camera along vector
-		params.camera_position -= to_origin * float(yoffset) * 0.1f;
+		params.cam.position -= to_origin * float(yoffset) * 0.1f;
 	}
 	virtual void windowSizeCallback(int width, int height) {
 
@@ -258,6 +275,16 @@ private:
 		cursor = normalize_T * normalize_S * cursor;
 
 		return glm::vec3(cursor.x, cursor.y, 0.f);
+	}
+
+	float clampDisplacement(float displacement) {
+		if (displacement > 0.15f) {
+			return 0.15f;
+		}
+		else if (displacement < -0.15f) {
+			return -0.15f;
+		}
+		return displacement;
 	}
 };
 
@@ -490,7 +517,7 @@ int main() {
 
 		// View Camera
 		glm::mat4 view = glm::lookAt(
-			params.camera_position,
+			params.cam.position,
 			glm::vec3(0.0f, 0.0f, 0.0f),
 			glm::vec3(0.0f, 1.0f, 0.0f)
 		);

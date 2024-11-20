@@ -284,18 +284,23 @@ public:
 
 		// Render Control Points Checkbox
 		ImGui::Checkbox("Render Control Points", &render_cp);
-
+		ImGui::SameLine();
 		// Render Control Point Lines Checkbox
 		ImGui::Checkbox("Render Control Point Lines", &render_cp_lines);
-
+		ImGuiAddSpace();
 		// 3D View Checkbox
 		ImGui::Checkbox("3D View", &view_3D);
 
 		// Scene selection
+		ImGuiAddSpace();
 		ImGui::Text("Select Scene:");
-		ImGui::RadioButton("Default", &params.scene, 0);
+
+		ImGui::RadioButton("None", &params.scene, 0);
+		ImGui::SameLine();
 		ImGui::RadioButton("Bezier", &params.scene, 1);
+		ImGui::SameLine();
 		ImGui::RadioButton("B-Spline", &params.scene, 2);
+		
 		ImGui::RadioButton("Surface of Revolution", &params.scene, 3);
 
 		//// Display the input text
@@ -335,6 +340,12 @@ public:
 		//ImGui::Text("Slider Value: %.3f", sliderValue);
 		//ImGui::Text("Drag Value: %.3f", dragValue);
 		//ImGui::Text("Input Value: %.3f", inputValue);
+	}
+
+	void ImGuiAddSpace() {
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Spacing();
 	}
 
 	glm::vec3 getColor() const {
@@ -381,7 +392,7 @@ glm::vec3 deCasteljau(const std::vector<glm::vec3>& controlPoints, float t) {
 	return temp[0];
 }
 
-std::vector<glm::vec3> quadraticBSpline(const std::vector<glm::vec3>& controlPoints, int iterations = 15) {
+std::vector<glm::vec3> quadraticBSpline(const std::vector<glm::vec3>& controlPoints, int iterations = 10) {
 	if (controlPoints.size() < 3) {
 		return std::vector<glm::vec3>{glm::vec3(0, 0, 0)};
 
@@ -413,16 +424,29 @@ std::vector<glm::vec3> createSoR(const std::vector<glm::vec3>& curve_points, int
 	std::vector<glm::vec3> surface_points;
 	float angle = 2 * M_PI / n_slices;
 
-	for (int slice = 0; slice < n_slices; slice++) {
-		for (const glm::vec3 point : curve_points) {
-			float x = point.x * cos(angle * slice);
-			float y = point.y;
-			float z = point.x * sin(angle * slice);
+	for(int i = 0; i < curve_points.size() - 1; i++) {
+		glm::vec3 p1 = curve_points[i];
+		glm::vec3 p2 = curve_points[i + 1];
 
-			surface_points.push_back(glm::vec3(x, y, z));
+		for(int j = 0; j < n_slices; j++) {
+			float theta = j * angle;
+			float next_theta = (j + 1) * angle;
+
+			glm::vec3 v1(p1.x * cos(theta), p1.y, p1.x * sin(theta));
+			glm::vec3 v2(p2.x * cos(theta), p2.y, p2.x * sin(theta));
+			glm::vec3 v3(p2.x * cos(next_theta), p2.y, p2.x * sin(next_theta));
+			glm::vec3 v4(p1.x * cos(next_theta), p1.y, p1.x * sin(next_theta));
+
+			surface_points.push_back(v1);
+			surface_points.push_back(v2);
+			surface_points.push_back(v3);
+
+			surface_points.push_back(v1);
+			surface_points.push_back(v3);
+			surface_points.push_back(v4);
 		}
 	}
-
+	
 	return surface_points;
 }
 
@@ -551,7 +575,7 @@ int main() {
 
 		case 3: // Surface of Revolution
 			surface_points.clear();
-			surface_points = createSoR(quadraticBSpline(params.cp_positions_vector));
+			surface_points = createSoR(quadraticBSpline(params.cp_positions_vector, 3));
 
 			surface_cpu.verts = surface_points;
 			surface_cpu.cols = std::vector<glm::vec3>(surface_cpu.verts.size(), glm::vec3(1, 1, 1)); // White color for Surface of Revolution

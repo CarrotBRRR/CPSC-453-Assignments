@@ -20,11 +20,11 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
-#define POINT_THRESHOLD 0.05f
+#define POINT_THRESHOLD 0.075f
 
 struct Parameters {
 	glm::vec3 cursor_pos = { 0.f,0.f,0.f };
-	glm::vec2 window_size = { 0.f,0.f };
+	glm::vec2 window_size = { 800.f, 800.f };
 
 	glm::vec3 cp_point_colour = { 1.f, 0.f, 0.f }; // Red color for control points
 	glm::vec3 cp_line_colour = { 0.f, 1.f, 0.f }; // Blue color for control point lines
@@ -38,7 +38,26 @@ struct Parameters {
 	int select = -1; // Selected Control Point
 	int scene = 0; // 0: default, 1: Bezier, 2: B-Spline
 
-	int view3D = false;
+	bool view3D = false;
+
+	bool render_cp = true;
+	bool render_cp_lines = true;
+
+	// Camera parameters
+	bool start_drag = false;
+	bool dragging_camera = false;
+
+	glm::vec3 drag_start = { 0.f, 0.f, 0.f };
+
+	glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 3.0f);
+
+	glm::mat4 projection = glm::perspective(
+		glm::radians(45.0f),
+		window_size.x / window_size.y,
+		0.1f, 100.0f);
+
+	glm::mat4 view_transform = glm::mat4(1.0);
+
 };
 
 static Parameters params;
@@ -55,10 +74,6 @@ public:
 				params.scene = 1;
 			} else if (key == GLFW_KEY_2) {
 				params.scene = 2;
-			}
-
-			else if (key == GLFW_KEY_V) {
-				params.view3D = true;
 			}
 		}
 	}
@@ -101,7 +116,6 @@ public:
 	}
 
 	virtual void scrollCallback(double xoffset, double yoffset) override {
-		Log::info("ScrollCallback: xoffset={}, yoffset={}", xoffset, yoffset);
 	}
 
 	virtual void windowSizeCallback(int width, int height) override {
@@ -150,38 +164,83 @@ public:
 	virtual void keyCallback(int key, int scancode, int action, int mods) override {
 		Log::info("KeyCallback: key={}, action={}", key, action);
 		if (action == GLFW_PRESS) {
-
 			if (key == GLFW_KEY_1) {
 				params.scene = 1;
-			}
-			else if (key == GLFW_KEY_2) {
+			} else if (key == GLFW_KEY_2) {
 				params.scene = 2;
-			}
-
-			else if (key == GLFW_KEY_V) {
-				params.view3D = false;
 			}
 		}
 	}
 
-	virtual void mouseButtonCallback(int button, int action, int mods) {}
-	virtual void cursorPosCallback(double xpos, double ypos) {}
-	virtual void scrollCallback(double xoffset, double yoffset) {}
+	virtual void mouseButtonCallback(int button, int action, int mods) {
+		if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+			params.start_drag = true;
+			params.dragging_camera = true;
+	
+		} else if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+			params.dragging_camera = false;
+		}
+
+	}
+	virtual void cursorPosCallback(double xpos, double ypos) {
+		
+
+		params.cursor_pos = calculateMousePos(xpos, ypos);
+
+		if(params.start_drag) {
+			params.drag_start = params.cursor_pos;
+			params.start_drag = false;
+
+			Log::info("CursorPosCallback: Drag_X={}, Drag_Y={}", params.drag_start.x, params.drag_start.y);
+		}
+		if (params.dragging_camera) {
+			glm::vec3 displacement = (params.cursor_pos - params.drag_start) * -0.1f;
+
+			Log::info("CursorPosCallback: Displacement_X={}, Displacement_Y={}", displacement.x, displacement.y);
+
+			// get distance to origin from camera
+			glm::vec3 to_origin = glm::normalize(params.camera_position);
+
+			// move camera along sphere at the distance from origin
+			params.camera_position = glm::rotate(glm::mat4(1.0f), displacement.x, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(params.camera_position, 1.0f);
+			params.camera_position = glm::rotate(glm::mat4(1.0f), displacement.y, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::vec4(params.camera_position, 1.0f);
+
+		}
+	}
+	virtual void scrollCallback(double xoffset, double yoffset) {
+		// get vector to origin from camera
+		glm::vec3 to_origin = glm::normalize(params.camera_position);
+
+		// move camera along vector
+		params.camera_position -= to_origin * float(yoffset) * 0.1f;
+	}
 	virtual void windowSizeCallback(int width, int height) {
 
 		// The CallbackInterface::windowSizeCallback will call glViewport for us
 		CallbackInterface::windowSizeCallback(width, height);
 	}
 private:
+	glm::vec3 calculateMousePos(double xpos, double ypos) {
+		glm::vec4 cursor = {xpos, ypos, 0.f, 1.f};
 
+		glm::mat4 pixel_centering_T = glm::translate(glm::mat4(1.f), glm::vec3(0.5f, 0.5f, 0.f));
+		glm::mat4 zero2one_T = glm::scale(glm::mat4(1.f), glm::vec3(1.f / params.window_size.x, 1.f / params.window_size.y, 0.f));
+		cursor = zero2one_T * pixel_centering_T * cursor;
+
+		cursor.y = 1.f - cursor.y;
+
+		glm::mat4 normalize_S = glm::scale(glm::mat4(1.f), glm::vec3(2.f, 2.f, 1.f));
+		glm::mat4 normalize_T = glm::translate(glm::mat4(1.f), glm::vec3(-1.f, -1.f, 0.f));
+		cursor = normalize_T * normalize_S * cursor;
+
+		return glm::vec3(cursor.x, cursor.y, 0.f);
+	}
 };
 
 class CurveEditorPanelRenderer : public PanelRendererInterface {
 public:
 	CurveEditorPanelRenderer()
-		: inputText(""), buttonClickCount(0), sliderValue(0.0f),
-		dragValue(0.0f), inputValue(0.0f), checkboxValue(false),
-		comboSelection(0)
+		: render_cp(true), render_cp_lines(true), view_3D(false)
 	{
 		// Initialize options for the combo box
 		options[0] = "Option 1";
@@ -199,62 +258,85 @@ public:
 		ImGui::ColorEdit3("Select Background Color", colorValue); // RGB color selector
 		ImGui::Text("Selected Color: R: %.3f, G: %.3f, B: %.3f", colorValue[0], colorValue[1], colorValue[2]);
 
-		// Text input
-		ImGui::InputText("Input Text", inputText, IM_ARRAYSIZE(inputText));
+		// Render Control Points Checkbox
+		ImGui::Checkbox("Render Control Points", &render_cp);
+		ImGui::Text("Feature Enabled: %s", render_cp ? "Yes" : "No");
 
-		// Display the input text
-		ImGui::Text("You entered: %s", inputText);
+		// Render Control Point Lines Checkbox
+		ImGui::Checkbox("Render Control Point Lines", &render_cp_lines);
+		ImGui::Text("Feature Enabled: %s", render_cp_lines ? "Yes" : "No");
 
-		// Button
-		if (ImGui::Button("Click Me")) {
-			buttonClickCount++;
-		}
-		ImGui::Text("Button clicked %d times", buttonClickCount);
+		// 3D View Checkbox
+		ImGui::Checkbox("3D View", &view_3D);
+		ImGui::Text("Feature Enabled: %s", view_3D ? "Yes" : "No");
 
-		// Scrollable block
-		ImGui::TextWrapped("Scrollable Block:");
-		ImGui::BeginChild("ScrollableChild", ImVec2(0, 100), true); // Create a scrollable child
-		for (int i = 0; i < 20; i++) {
-			ImGui::Text("Item %d", i);
-		}
-		ImGui::EndChild();
+		//// Display the input text
+		//ImGui::Text("You entered: %s", inputText);
 
-		// Float slider
-		ImGui::SliderFloat("Float Slider", &sliderValue, 0.0f, 100.0f, "Slider Value: %.3f");
+		//// Text input
+		//ImGui::InputText("Input Text", inputText, IM_ARRAYSIZE(inputText));
 
-		// Float drag
-		ImGui::DragFloat("Float Drag", &dragValue, 0.1f, 0.0f, 100.0f, "Drag Value: %.3f");
+		//// Button
+		//if (ImGui::Button("Click Me")) {
+		//	buttonClickCount++;
+		//}
+		//ImGui::Text("Button clicked %d times", buttonClickCount);
 
-		// Float input
-		ImGui::InputFloat("Float Input", &inputValue, 0.1f, 1.0f, "Input Value: %.3f");
+		//// Scrollable block
+		//ImGui::TextWrapped("Scrollable Block:");
+		//ImGui::BeginChild("ScrollableChild", ImVec2(0, 100), true); // Create a scrollable child
+		//for (int i = 0; i < 20; i++) {
+		//	ImGui::Text("Item %d", i);
+		//}
+		//ImGui::EndChild();
 
-		// Checkbox
-		ImGui::Checkbox("Enable Feature", &checkboxValue);
-		ImGui::Text("Feature Enabled: %s", checkboxValue ? "Yes" : "No");
+		//// Float slider
+		//ImGui::SliderFloat("Float Slider", &sliderValue, 0.0f, 100.0f, "Slider Value: %.3f");
 
-		// Combo box
-		ImGui::Combo("Select an Option", &comboSelection, options, IM_ARRAYSIZE(options));
-		ImGui::Text("Selected: %s", options[comboSelection]);
+		//// Float drag
+		//ImGui::DragFloat("Float Drag", &dragValue, 0.1f, 0.0f, 100.0f, "Drag Value: %.3f");
 
-		// Displaying current values
-		ImGui::Text("Slider Value: %.3f", sliderValue);
-		ImGui::Text("Drag Value: %.3f", dragValue);
-		ImGui::Text("Input Value: %.3f", inputValue);
+		//// Float input
+		//ImGui::InputFloat("Float Input", &inputValue, 0.1f, 1.0f, "Input Value: %.3f");
+
+		//// Combo box
+		//ImGui::Combo("Select an Option", &comboSelection, options, IM_ARRAYSIZE(options));
+		//ImGui::Text("Selected: %s", options[comboSelection]);
+
+		//// Displaying current values
+		//ImGui::Text("Slider Value: %.3f", sliderValue);
+		//ImGui::Text("Drag Value: %.3f", dragValue);
+		//ImGui::Text("Input Value: %.3f", inputValue);
 	}
 
 	glm::vec3 getColor() const {
 		return glm::vec3(colorValue[0], colorValue[1], colorValue[2]);
 	}
 
+	bool getRenderCP() const {
+		return render_cp;
+	}
+
+	bool getRenderCPLines() const {
+		return render_cp_lines;
+	}
+
+	bool getView3D() const {
+		return view_3D;
+	}
+
 private:
 	float colorValue[3];  // Array for RGB color values
-	char inputText[256];  // Buffer for input text
-	int buttonClickCount; // Count button clicks
-	float sliderValue;    // Value for float slider
-	float dragValue;      // Value for drag input
-	float inputValue;     // Value for float input
-	bool checkboxValue;   // Value for checkbox
-	int comboSelection;   // Index of selected option in combo box
+	bool render_cp;   // Value for checkbox
+	bool render_cp_lines;   // Value for checkbox
+	bool view_3D;   // Value for checkbox
+
+	//char inputText[256];  // Buffer for input text
+	//int buttonClickCount; // Count button clicks
+	//float sliderValue;    // Value for float slider
+	//float dragValue;      // Value for drag input
+	//float inputValue;     // Value for float input
+	//int comboSelection;   // Index of selected option in combo box
 	const char* options[3]; // Options for the combo box
 };
 
@@ -336,6 +418,12 @@ int main() {
 	GPU_Geometry curve_gpu;
 
 	while (!window.shouldClose()) {
+		params.window_size = { window.getWidth(), window.getHeight() };
+
+		params.render_cp = curve_editor_panel_renderer->getRenderCP();
+		params.render_cp_lines = curve_editor_panel_renderer->getRenderCPLines();
+		params.view3D = curve_editor_panel_renderer->getView3D();
+
 		if (params.view3D) {
 			window.setCallbacks(std::make_shared<TurnTable3DViewerCallBack>());
 		}
@@ -354,6 +442,24 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		shader_program_default.use();
+
+		// View Camera
+		glm::mat4 view = glm::lookAt(
+			params.camera_position,
+			glm::vec3(0.0f, 0.0f, 0.0f),
+			glm::vec3(0.0f, 1.0f, 0.0f)
+		);
+
+		if (!params.view3D) {
+			params.view_transform = glm::mat4(1.0);
+		} else {
+			params.view_transform = params.projection * view;
+		}
+
+		glUniformMatrix4fv(
+			glGetUniformLocation(shader_program_default.getProgram(), "view_transform"),
+			1, GL_FALSE, glm::value_ptr(params.view_transform)
+		);
 
 		// Calculate points on the curve
 		curve_cpu.verts = curve_points;
@@ -390,15 +496,17 @@ int main() {
 		}
 
 		// Render control points
-		cp_cpu.verts = params.cp_positions_vector;
-		cp_cpu.cols = params.cp_colours_vector;
+		if (params.render_cp) {
+			cp_cpu.verts = params.cp_positions_vector;
+			cp_cpu.cols = params.cp_colours_vector;
 
-		cp_gpu.setVerts(cp_cpu.verts);
-		cp_gpu.setCols(cp_cpu.cols);
+			cp_gpu.setVerts(cp_cpu.verts);
+			cp_gpu.setCols(cp_cpu.cols);
 
-		cp_gpu.bind();
-		glPointSize(15.f);
-		glDrawArrays(GL_POINTS, 0, cp_cpu.verts.size());
+			cp_gpu.bind();
+			glPointSize(15.f);
+			glDrawArrays(GL_POINTS, 0, cp_cpu.verts.size());
+		}
 
 		// Render curve
 		curve_gpu.setVerts(curve_points);
@@ -406,16 +514,18 @@ int main() {
 
 		curve_gpu.bind();
 		glDrawArrays(GL_LINE_STRIP, 0, curve_cpu.verts.size());
-
+		
 		// Render control point lines
-		cp_lines_cpu.verts = params.cp_positions_vector;
-		cp_lines_cpu.cols = params.cp_lines_colours_vector;
+		if (params.render_cp_lines) {
+			cp_lines_cpu.verts = params.cp_positions_vector;
+			cp_lines_cpu.cols = params.cp_lines_colours_vector;
 
-		cp_lines_gpu.setVerts(cp_lines_cpu.verts);
-		cp_lines_gpu.setCols(cp_lines_cpu.cols);
+			cp_lines_gpu.setVerts(cp_lines_cpu.verts);
+			cp_lines_gpu.setCols(cp_lines_cpu.cols);
 
-		cp_lines_gpu.bind();
-		glDrawArrays(GL_LINE_STRIP, 0, cp_lines_cpu.verts.size());
+			cp_lines_gpu.bind();
+			glDrawArrays(GL_LINE_STRIP, 0, cp_lines_cpu.verts.size());
+		}
 
 		//
 		glDisable(GL_FRAMEBUFFER_SRGB);

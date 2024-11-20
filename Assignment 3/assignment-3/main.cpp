@@ -41,7 +41,7 @@ struct Parameters {
 	std::vector<glm::vec3> cp_lines_colours_vector = std::vector<glm::vec3>(cp_positions_vector.size(), cp_line_colour);
 
 	int select = -1; // Selected Control Point
-	int scene = 0; // 0: default, 1: Bezier, 2: B-Spline
+	int scene = 0; // 0: default, 1: Bezier, 2: B-Spline, 3: Surface of Revolution
 
 	bool view3D = false;
 
@@ -51,7 +51,6 @@ struct Parameters {
 	// Camera parameters
 	bool start_drag = false;
 	bool dragging_camera = false;
-
 	glm::vec3 drag_start = { 0.f, 0.f, 0.f };
 
 	glm::vec3 last_camera_position = glm::vec3(0.0f, 0.0f, 2.415f);
@@ -80,6 +79,8 @@ public:
 				params.scene = 1;
 			} else if (key == GLFW_KEY_2) {
 				params.scene = 2;
+			} else if (key == GLFW_KEY_3) {
+				params.scene = 3;
 			}
 		}
 	}
@@ -174,6 +175,8 @@ public:
 				params.scene = 1;
 			} else if (key == GLFW_KEY_2) {
 				params.scene = 2;
+			} else if (key == GLFW_KEY_3) {
+				params.scene = 3;
 			}
 
 			else if (key == GLFW_KEY_R) {
@@ -213,9 +216,7 @@ public:
 
 			// Rotation Angles (Yaw and Pitch, in Radians) with relation to displacement
 			float yaw = displacement.x * 6 * M_PI;
-			float pitch = displacement.y * 6 * M_PI;
-
-			pitch = glm::clamp((double)pitch, -M_PI_2 + 0.01f, M_PI_2 - 0.01f);
+			float pitch = -displacement.y * 6 * M_PI;
 
 			// Rotation Matrix
 			glm::mat4 yaw_rotation = glm::rotate(glm::mat4(1.0f), yaw, glm::vec3(0.0f, 1.0f, 0.0f)); // Y-axis
@@ -227,6 +228,7 @@ public:
 			glm::vec4 new_position = rotation * glm::vec4(params.last_camera_position, 1.0f);
 
 			params.camera_position = glm::normalize(glm::vec3(new_position)) * radius;
+
 		}
 	}
 	virtual void scrollCallback(double xoffset, double yoffset) {
@@ -282,15 +284,19 @@ public:
 
 		// Render Control Points Checkbox
 		ImGui::Checkbox("Render Control Points", &render_cp);
-		ImGui::Text("Feature Enabled: %s", render_cp ? "Yes" : "No");
 
 		// Render Control Point Lines Checkbox
 		ImGui::Checkbox("Render Control Point Lines", &render_cp_lines);
-		ImGui::Text("Feature Enabled: %s", render_cp_lines ? "Yes" : "No");
 
 		// 3D View Checkbox
 		ImGui::Checkbox("3D View", &view_3D);
-		ImGui::Text("Feature Enabled: %s", view_3D ? "Yes" : "No");
+
+		// Scene selection
+		ImGui::Text("Select Scene:");
+		ImGui::RadioButton("Default", &params.scene, 0);
+		ImGui::RadioButton("Bezier", &params.scene, 1);
+		ImGui::RadioButton("B-Spline", &params.scene, 2);
+		ImGui::RadioButton("Surface of Revolution", &params.scene, 3);
 
 		//// Display the input text
 		//ImGui::Text("You entered: %s", inputText);
@@ -393,7 +399,31 @@ std::vector<glm::vec3> quadraticBSpline(const std::vector<glm::vec3>& controlPoi
     curve_points.push_back((0.75f) * temp[temp.size() - 2] + (0.25f) * temp[temp.size() - 1]);
     curve_points.push_back((0.25f) * temp[temp.size() - 2] + (0.75f) * temp[temp.size() - 1]);
 
+	if (params.cp_positions_vector.size() > 2) {
+		std::reverse(curve_points.begin(), curve_points.end());
+		curve_points.push_back(params.cp_positions_vector.front());
+		std::reverse(curve_points.begin(), curve_points.end());
+		curve_points.push_back(params.cp_positions_vector.back());
+	}
+
     return quadraticBSpline(curve_points, iterations - 1);
+}
+
+std::vector<glm::vec3> createSoR(const std::vector<glm::vec3>& curve_points, int n_slices = 36) {
+	std::vector<glm::vec3> surface_points;
+	float angle = 2 * M_PI / n_slices;
+
+	for (int slice = 0; slice < n_slices; slice++) {
+		for (const glm::vec3 point : curve_points) {
+			float x = point.x * cos(angle * slice);
+			float y = point.y;
+			float z = point.x * sin(angle * slice);
+
+			surface_points.push_back(glm::vec3(x, y, z));
+		}
+	}
+
+	return surface_points;
 }
 
 int main() {
@@ -413,7 +443,7 @@ int main() {
 
 	ShaderProgram shader_program_default("shaders/test.vert", "shaders/test.frag");
 
-	// Set up control points in GPU
+	// Control points
 	CPU_Geometry cp_cpu;
 	cp_cpu.verts = params.cp_positions_vector;
 	cp_cpu.cols = params.cp_colours_vector;
@@ -431,13 +461,26 @@ int main() {
 	cp_lines_gpu.setVerts(cp_lines_cpu.verts);
 	cp_lines_gpu.setCols(cp_lines_cpu.cols);
 
-	// Curve points
+	// Curve Points
+	CPU_Geometry curve_cpu;
+	GPU_Geometry curve_gpu;
+
 	std::vector<glm::vec3> curve_points;
 	int segments = 100;
 
-	// Set up curve in GPU
-	CPU_Geometry curve_cpu;
-	GPU_Geometry curve_gpu;
+	// Surface of Revolution
+	std::vector<glm::vec3> surface_points;
+
+	CPU_Geometry surface_cpu;
+	GPU_Geometry surface_gpu;
+
+	// Tensor Product Surface
+	std::vector<glm::vec3> tensor_cp;
+
+	std::vector<glm::vec3> tensor_cp2;
+
+	CPU_Geometry tensor_cpu;
+	GPU_Geometry tensor_gpu;
 
 	while (!window.shouldClose()) {
 		params.window_size = { window.getWidth(), window.getHeight() };
@@ -504,15 +547,17 @@ int main() {
 			curve_points.clear();
 			curve_points = quadraticBSpline(params.cp_positions_vector);
 
-			if (params.cp_positions_vector.size() > 2) {
-				std::reverse(curve_points.begin(), curve_points.end());
-				curve_points.push_back(params.cp_positions_vector.front());
-				std::reverse(curve_points.begin(), curve_points.end());
-				curve_points.push_back(params.cp_positions_vector.back());
-			}
-			
 			break;
 
+		case 3: // Surface of Revolution
+			surface_points.clear();
+			surface_points = createSoR(quadraticBSpline(params.cp_positions_vector));
+
+			surface_cpu.verts = surface_points;
+			surface_cpu.cols = std::vector<glm::vec3>(surface_cpu.verts.size(), glm::vec3(1, 1, 1)); // White color for Surface of Revolution
+
+			break;
+			
 		default:
 			break;
 		}
@@ -531,11 +576,23 @@ int main() {
 		}
 
 		// Render curve
-		curve_gpu.setVerts(curve_points);
-		curve_gpu.setCols(curve_cpu.cols);
+		if (params.scene == 1 || params.scene == 2) {
+			curve_gpu.setVerts(curve_points);
+			curve_gpu.setCols(curve_cpu.cols);
 
-		curve_gpu.bind();
-		glDrawArrays(GL_LINE_STRIP, 0, curve_cpu.verts.size());
+			curve_gpu.bind();
+			glDrawArrays(GL_LINE_STRIP, 0, curve_cpu.verts.size());
+		}
+
+		if (params.scene == 3){ // Render Surface of Revolution
+			surface_gpu.setVerts(surface_cpu.verts);
+			surface_gpu.setCols(surface_cpu.cols);
+
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+			surface_gpu.bind();
+			glDrawArrays(GL_TRIANGLES, 0, surface_cpu.verts.size());
+		}
 		
 		// Render control point lines
 		if (params.render_cp_lines) {

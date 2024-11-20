@@ -302,44 +302,6 @@ public:
 		ImGui::RadioButton("B-Spline", &params.scene, 2);
 		
 		ImGui::RadioButton("Surface of Revolution", &params.scene, 3);
-
-		//// Display the input text
-		//ImGui::Text("You entered: %s", inputText);
-
-		//// Text input
-		//ImGui::InputText("Input Text", inputText, IM_ARRAYSIZE(inputText));
-
-		//// Button
-		//if (ImGui::Button("Click Me")) {
-		//	buttonClickCount++;
-		//}
-		//ImGui::Text("Button clicked %d times", buttonClickCount);
-
-		//// Scrollable block
-		//ImGui::TextWrapped("Scrollable Block:");
-		//ImGui::BeginChild("ScrollableChild", ImVec2(0, 100), true); // Create a scrollable child
-		//for (int i = 0; i < 20; i++) {
-		//	ImGui::Text("Item %d", i);
-		//}
-		//ImGui::EndChild();
-
-		//// Float slider
-		//ImGui::SliderFloat("Float Slider", &sliderValue, 0.0f, 100.0f, "Slider Value: %.3f");
-
-		//// Float drag
-		//ImGui::DragFloat("Float Drag", &dragValue, 0.1f, 0.0f, 100.0f, "Drag Value: %.3f");
-
-		//// Float input
-		//ImGui::InputFloat("Float Input", &inputValue, 0.1f, 1.0f, "Input Value: %.3f");
-
-		//// Combo box
-		//ImGui::Combo("Select an Option", &comboSelection, options, IM_ARRAYSIZE(options));
-		//ImGui::Text("Selected: %s", options[comboSelection]);
-
-		//// Displaying current values
-		//ImGui::Text("Slider Value: %.3f", sliderValue);
-		//ImGui::Text("Drag Value: %.3f", dragValue);
-		//ImGui::Text("Input Value: %.3f", inputValue);
 	}
 
 	void ImGuiAddSpace() {
@@ -370,12 +332,6 @@ private:
 	bool render_cp_lines;   // Value for checkbox
 	bool view_3D;   // Value for checkbox
 
-	//char inputText[256];  // Buffer for input text
-	//int buttonClickCount; // Count button clicks
-	//float sliderValue;    // Value for float slider
-	//float dragValue;      // Value for drag input
-	//float inputValue;     // Value for float input
-	//int comboSelection;   // Index of selected option in combo box
 	const char* options[3]; // Options for the combo box
 };
 

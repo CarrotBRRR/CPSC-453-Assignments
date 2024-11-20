@@ -226,7 +226,6 @@ public:
 			float yaw_offset = -displacement.x * HORIZONTAL_SENSITIVITY;
 			float pitch_offset = clampDisplacement(displacement.y) * VERTICAL_SENSITIVITY;
 
-			// Update yaw and pitch
 			params.cam.yaw += yaw_offset;
 			params.cam.pitch += pitch_offset;
 
@@ -240,10 +239,10 @@ public:
 			front.y = sin(params.cam.pitch);
 			front.z = sin(params.cam.yaw) * cos(params.cam.pitch);
 
-			// Normalize the front vector (optional since it's being recomputed)
+			// Normalize the front vector
 			front = glm::normalize(front);
 
-			// Update the camera position (this can be done by moving the camera along the front vector)
+			// Update the camera position
 			float radius = glm::length(params.cam.last_position); // Distance from origin
 			params.cam.position = front * radius;
 		}

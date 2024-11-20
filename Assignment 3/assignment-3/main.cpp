@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+
 #include <glad/glad.h>
 
 #include <iostream>
@@ -6,6 +8,7 @@
 #include <vector>
 #include <limits>
 #include <functional>
+#include <algorithm>
 
 #include "Geometry.h"
 #include "GLDebug.h"
@@ -19,6 +22,8 @@
 
 #include "glm/glm.hpp"
 #include "glm/gtc/type_ptr.hpp"
+
+#include "cmath"
 
 #define POINT_THRESHOLD 0.075f
 
@@ -49,7 +54,8 @@ struct Parameters {
 
 	glm::vec3 drag_start = { 0.f, 0.f, 0.f };
 
-	glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 3.0f);
+	glm::vec3 last_camera_position = glm::vec3(0.0f, 0.0f, 2.415f);
+	glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 2.415f);
 
 	glm::mat4 projection = glm::perspective(
 		glm::radians(45.0f),
@@ -169,6 +175,10 @@ public:
 			} else if (key == GLFW_KEY_2) {
 				params.scene = 2;
 			}
+
+			else if (key == GLFW_KEY_R) {
+				params.camera_position = glm::vec3(0.0f, 0.0f, 2.415f);
+			}
 		}
 	}
 
@@ -183,12 +193,11 @@ public:
 
 	}
 	virtual void cursorPosCallback(double xpos, double ypos) {
-		
-
 		params.cursor_pos = calculateMousePos(xpos, ypos);
 
 		if(params.start_drag) {
 			params.drag_start = params.cursor_pos;
+			params.last_camera_position = params.camera_position;
 			params.start_drag = false;
 
 			Log::info("CursorPosCallback: Drag_X={}, Drag_Y={}", params.drag_start.x, params.drag_start.y);
@@ -199,12 +208,25 @@ public:
 			Log::info("CursorPosCallback: Displacement_X={}, Displacement_Y={}", displacement.x, displacement.y);
 
 			// get distance to origin from camera
-			glm::vec3 to_origin = glm::normalize(params.camera_position);
+			glm::vec3 to_origin = glm::normalize(params.last_camera_position);
+			float radius = glm::length(params.last_camera_position);
 
-			// move camera along sphere at the distance from origin
-			params.camera_position = glm::rotate(glm::mat4(1.0f), displacement.x, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(params.camera_position, 1.0f);
-			params.camera_position = glm::rotate(glm::mat4(1.0f), displacement.y, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::vec4(params.camera_position, 1.0f);
+			// Rotation Angles (Yaw and Pitch, in Radians) with relation to displacement
+			float yaw = displacement.x * 6 * M_PI;
+			float pitch = displacement.y * 6 * M_PI;
 
+			pitch = glm::clamp((double)pitch, -M_PI_2 + 0.01f, M_PI_2 - 0.01f);
+
+			// Rotation Matrix
+			glm::mat4 yaw_rotation = glm::rotate(glm::mat4(1.0f), yaw, glm::vec3(0.0f, 1.0f, 0.0f)); // Y-axis
+			glm::mat4 pitch_rotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3(1.0f, 0.0f, 0.0f)); // X-axis
+
+			// Combine rotations
+			glm::mat4 rotation =  yaw_rotation * pitch_rotation;
+
+			glm::vec4 new_position = rotation * glm::vec4(params.last_camera_position, 1.0f);
+
+			params.camera_position = glm::normalize(glm::vec3(new_position)) * radius;
 		}
 	}
 	virtual void scrollCallback(double xoffset, double yoffset) {

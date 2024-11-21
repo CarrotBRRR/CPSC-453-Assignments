@@ -326,11 +326,6 @@ public:
 	CurveEditorPanelRenderer()
 		: render_cp(true), render_cp_lines(true), view_3D(false)
 	{
-		// Initialize options for the combo box
-		options[0] = "Option 1";
-		options[1] = "Option 2";
-		options[2] = "Option 3";
-
 		// Initialize color (black by default)
 		colorValue[0] = 0.f; // R
 		colorValue[1] = 0.f; // G
@@ -380,7 +375,6 @@ public:
 			ImGui::Combo(" ", &params.tps_option, tps_options, IM_ARRAYSIZE(tps_options));
 			view_3D = true;
 		}
-
 	}
 
 	void ImGuiAddSpace() {
@@ -412,8 +406,6 @@ private:
 	bool view_3D;   // Value for checkbox
 
 	const char* tps_options[3] = {"None", "Handout", "Custom" }; // Options for the combo box
-
-	const char* options[3]; // Options for the combo box
 };
 
 glm::vec3 deCasteljau(const std::vector<glm::vec3>& controlPoints, float t) {

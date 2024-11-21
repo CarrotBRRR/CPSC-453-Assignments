@@ -21,7 +21,7 @@
 | `Scroll Down` | | Zoom Out     |
 
 **In addition to the above controls, there are also options in the ImGui Panel**\
-**Some options will appear and disappear depending on the scene**
+**Some options will appear and disappear depending on the scene**\
 ![Control Menu](<images/Control Menu.png>)
 
 ## Images of my stuff working :D

@@ -26,7 +26,7 @@
 #include "cmath"
 
 #define POINT_THRESHOLD 0.075f
-#define CAMERA_DEFAULT_DISTANCE 1.f
+#define CAMERA_DEFAULT_DISTANCE 2.f
 
 #define VERTICAL_SENSITIVITY 0.1f
 #define HORIZONTAL_SENSITIVITY 0.15f
@@ -36,6 +36,27 @@ struct Camera {
 	float pitch = 0.0f;
 	glm::vec3 position = glm::vec3(0.0f, 0.0f, CAMERA_DEFAULT_DISTANCE);
 	glm::vec3 last_position = glm::vec3(0.0f, 0.0f, CAMERA_DEFAULT_DISTANCE);
+};
+
+struct TensorProductSurfaceCP {
+	std::vector<std::vector<glm::vec3>> getSurface[3] = {
+		{ { glm::vec3(0, 0, 0)} },
+
+		{
+			{ glm::vec3(-2, 0, -2), glm::vec3(-1, 0, -2), glm::vec3(0,  0, -2), glm::vec3(1, 0, -2), glm::vec3(2, 0, -2) },
+			{ glm::vec3(-2, 0, -1), glm::vec3(-1, 1, -1), glm::vec3(0,  1, -1), glm::vec3(1, 1, -1), glm::vec3(2, 0, -1) },
+			{ glm::vec3(-2, 0,  0), glm::vec3(-1, 1,  0), glm::vec3(0, -1,  0), glm::vec3(1, 1,  0), glm::vec3(2, 0,  0) },
+			{ glm::vec3(-2, 0,  1), glm::vec3(-1, 1,  1), glm::vec3(0,  1,  1), glm::vec3(1, 1,  1), glm::vec3(2, 0,  1) },
+			{ glm::vec3(-2, 0,  2), glm::vec3(-1, 0,  2), glm::vec3(0,  0,  2), glm::vec3(1, 0,  2), glm::vec3(2, 0,  2) }
+		},
+
+		{
+			{ glm::vec3(-2, -2, -2), glm::vec3(-1, -1, -2), glm::vec3(0,  1, -2), glm::vec3(1,  0, -2), glm::vec3(2, 0, -2) },
+			{ glm::vec3(-2, -1, -1), glm::vec3(-1,  0, -1), glm::vec3(0,  0, -1), glm::vec3(1, -2, -1), glm::vec3(2, 0, -1) },
+			{ glm::vec3(-2,  0,  0), glm::vec3(-1,  -1,  0), glm::vec3(0,  0,  0), glm::vec3(1,  1,  0), glm::vec3(2, 0,  0) },
+			{ glm::vec3(-2,  1,  1), glm::vec3(-1,  0,  1), glm::vec3(0, -2,  1), glm::vec3(1, -1,  1), glm::vec3(2, 0,  1) }
+		}
+	};
 };
 
 struct Parameters {
@@ -55,6 +76,7 @@ struct Parameters {
 	int scene = 0; // 0: default, 1: Bezier, 2: B-Spline, 3: Surface of Revolution
 
 	bool view3D = false;
+	bool wireframe = true;
 
 	bool render_cp = true;
 	bool render_cp_lines = true;
@@ -73,6 +95,8 @@ struct Parameters {
 
 	glm::mat4 view_transform = glm::mat4(1.0);
 
+	TensorProductSurfaceCP tps_cp;
+	int tps_option = 0;
 };
 
 static Parameters params;
@@ -82,7 +106,6 @@ public:
 	CurveEditorCallBack() {}
 
 	virtual void keyCallback(int key, int scancode, int action, int mods) override {
-		Log::info("KeyCallback: key={}, action={}", key, action);
 		if (action == GLFW_PRESS) {
 
 			if (key == GLFW_KEY_1) {
@@ -91,6 +114,15 @@ public:
 				params.scene = 2;
 			} else if (key == GLFW_KEY_3) {
 				params.scene = 3;
+			} else if (key == GLFW_KEY_4) {
+				params.scene = 4;
+			}
+			else if (key == GLFW_KEY_R) {
+				params.cam.yaw = M_PI_2;
+				params.cam.pitch = 0.0f;
+				params.cam.position = glm::vec3(0.0f, 0.0f, CAMERA_DEFAULT_DISTANCE);
+
+				params.cp_positions_vector.clear();
 			}
 		}
 	}
@@ -162,7 +194,6 @@ private:
 		int selection = -1;
 		for (size_t i = 0; i < params.cp_positions_vector.size(); i++) {
 			if (glm::length(glm::vec2(params.cp_positions_vector[i]) - glm::vec2(params.cursor_pos)) < threshold) {
-				Log::info("Selected control point {}", i);
 				selection = i;
 				break;
 			}
@@ -179,7 +210,6 @@ public:
 	TurnTable3DViewerCallBack() {}
 
 	virtual void keyCallback(int key, int scancode, int action, int mods) override {
-		Log::info("KeyCallback: key={}, action={}", key, action);
 		if (action == GLFW_PRESS) {
 			if (key == GLFW_KEY_1) {
 				params.scene = 1;
@@ -187,6 +217,8 @@ public:
 				params.scene = 2;
 			} else if (key == GLFW_KEY_3) {
 				params.scene = 3;
+			} else if (key == GLFW_KEY_4) {
+				params.scene = 4;
 			}
 
 			else if (key == GLFW_KEY_R) {
@@ -205,8 +237,8 @@ public:
 		} else if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
 			params.dragging_camera = false;
 		}
-
 	}
+
 	virtual void cursorPosCallback(double xpos, double ypos) {
 		// Calculate the new mouse position in your chosen coordinate system
 		params.cursor_pos = calculateMousePos(xpos, ypos);
@@ -246,6 +278,7 @@ public:
 			params.cam.position = front * radius;
 		}
 	}
+
 	virtual void scrollCallback(double xoffset, double yoffset) {
 		// get vector to origin from camera
 		glm::vec3 to_origin = glm::normalize(params.cam.position);
@@ -253,11 +286,13 @@ public:
 		// move camera along vector
 		params.cam.position -= to_origin * float(yoffset) * 0.1f;
 	}
+
 	virtual void windowSizeCallback(int width, int height) {
 
 		// The CallbackInterface::windowSizeCallback will call glViewport for us
 		CallbackInterface::windowSizeCallback(width, height);
 	}
+
 private:
 	glm::vec3 calculateMousePos(double xpos, double ypos) {
 		glm::vec4 cursor = {xpos, ypos, 0.f, 1.f};
@@ -304,17 +339,26 @@ public:
 
 	virtual void render() override {
 		// Color selector
-		ImGui::ColorEdit3("Select Background Color", colorValue); // RGB color selector
-		ImGui::Text("Selected Color: R: %.3f, G: %.3f, B: %.3f", colorValue[0], colorValue[1], colorValue[2]);
+		ImGui::Text("Select Background Color");
+		ImGui::SameLine();
+		ImGui::ColorEdit3(" ", colorValue); // RGB color selector
 
 		// Render Control Points Checkbox
 		ImGui::Checkbox("Render Control Points", &render_cp);
-		ImGui::SameLine();
-		// Render Control Point Lines Checkbox
-		ImGui::Checkbox("Render Control Point Lines", &render_cp_lines);
+		if (params.scene != 4) {
+			ImGui::SameLine();
+			// Render Control Point Lines Checkbox
+			ImGui::Checkbox("Render Control Point Lines", &render_cp_lines);
+		}
+		
 		ImGuiAddSpace();
 		// 3D View Checkbox
 		ImGui::Checkbox("3D View", &view_3D);
+
+		if (params.scene >= 3) {
+			ImGui::SameLine();
+			ImGui::Checkbox("Wireframe", &params.wireframe);
+		}
 
 		// Scene selection
 		ImGuiAddSpace();
@@ -327,6 +371,16 @@ public:
 		ImGui::RadioButton("B-Spline", &params.scene, 2);
 		
 		ImGui::RadioButton("Surface of Revolution", &params.scene, 3);
+
+		ImGui::RadioButton("Tensor Product Surface", &params.scene, 4);
+
+		// Scene specific options
+		if (params.scene == 4) {
+			ImGui::Text("Select a Tensor Product Surface:");
+			ImGui::Combo(" ", &params.tps_option, tps_options, IM_ARRAYSIZE(tps_options));
+			view_3D = true;
+		}
+
 	}
 
 	void ImGuiAddSpace() {
@@ -357,6 +411,8 @@ private:
 	bool render_cp_lines;   // Value for checkbox
 	bool view_3D;   // Value for checkbox
 
+	const char* tps_options[3] = {"None", "Handout", "Custom" }; // Options for the combo box
+
 	const char* options[3]; // Options for the combo box
 };
 
@@ -373,15 +429,15 @@ glm::vec3 deCasteljau(const std::vector<glm::vec3>& controlPoints, float t) {
 	return temp[0];
 }
 
-std::vector<glm::vec3> quadraticBSpline(const std::vector<glm::vec3>& controlPoints, int iterations = 10) {
-	if (controlPoints.size() < 3) {
+std::vector<glm::vec3> quadraticBSpline(const std::vector<glm::vec3>& control_points, int iterations = 10) {
+	if (control_points.size() < 3) {
 		return std::vector<glm::vec3>{glm::vec3(0, 0, 0)};
 
 	} else if (iterations == 0) {
-		return controlPoints;
+		return control_points;
 	}
 
-	std::vector<glm::vec3> temp = controlPoints;
+	std::vector<glm::vec3> temp = control_points;
 
     std::vector<glm::vec3> curve_points;
     for (int i = 0; i < int(temp.size() - 2); i++) {
@@ -391,12 +447,10 @@ std::vector<glm::vec3> quadraticBSpline(const std::vector<glm::vec3>& controlPoi
     curve_points.push_back((0.75f) * temp[temp.size() - 2] + (0.25f) * temp[temp.size() - 1]);
     curve_points.push_back((0.25f) * temp[temp.size() - 2] + (0.75f) * temp[temp.size() - 1]);
 
-	if (params.cp_positions_vector.size() > 2) {
-		std::reverse(curve_points.begin(), curve_points.end());
-		curve_points.push_back(params.cp_positions_vector.front());
-		std::reverse(curve_points.begin(), curve_points.end());
-		curve_points.push_back(params.cp_positions_vector.back());
-	}
+	std::reverse(curve_points.begin(), curve_points.end());
+	curve_points.push_back(control_points.front());
+	std::reverse(curve_points.begin(), curve_points.end());
+	curve_points.push_back(control_points.back());
 
     return quadraticBSpline(curve_points, iterations - 1);
 }
@@ -428,6 +482,61 @@ std::vector<glm::vec3> createSoR(const std::vector<glm::vec3>& curve_points, int
 		}
 	}
 	
+	return surface_points;
+}
+
+std::vector<glm::vec3> createTPS(const std::vector<std::vector<glm::vec3>>& control_points, int iterations = 3) {
+	std::vector<glm::vec3> geom;
+	std::vector<glm::vec3> smooth_geom;
+
+	// Smooth the rows
+	std::vector<std::vector<glm::vec3>> grid_points_row;
+	for (const std::vector<glm::vec3>& inner_cp : control_points) {
+		geom = inner_cp;
+		smooth_geom = quadraticBSpline(geom, iterations);
+
+		grid_points_row.push_back(smooth_geom);
+	}
+
+	// Transpose the grid
+	std::vector<std::vector<glm::vec3>> transposed_grid;
+	for (int i = 0; i < grid_points_row[0].size(); i++) {
+		std::vector<glm::vec3> column_points;
+
+		for (int j = 0; j < grid_points_row.size(); j++) {
+			column_points.push_back(grid_points_row[j][i]);
+		}
+		transposed_grid.push_back(column_points);
+	}
+
+	// Smooth the columns
+	std::vector<std::vector<glm::vec3>> grid_points_col;
+	for (const std::vector<glm::vec3>& inner_cp : transposed_grid) {
+		geom = inner_cp;
+		smooth_geom = quadraticBSpline(geom, iterations);
+
+		grid_points_col.push_back(smooth_geom);
+	}
+
+	// Generate Triangles
+	std::vector<glm::vec3> surface_points;
+	for (int i = 0; i < grid_points_col.size() - 1; i++) {
+		for (int j = 0; j < grid_points_col[i].size() - 1; j++) {
+			glm::vec3 v1 = grid_points_col[i][j];
+			glm::vec3 v2 = grid_points_col[i + 1][j];
+			glm::vec3 v3 = grid_points_col[i + 1][j + 1];
+			glm::vec3 v4 = grid_points_col[i][j + 1];
+
+			surface_points.push_back(v1);
+			surface_points.push_back(v2);
+			surface_points.push_back(v3);
+
+			surface_points.push_back(v1);
+			surface_points.push_back(v3);
+			surface_points.push_back(v4);
+		}
+	}
+
 	return surface_points;
 }
 
@@ -480,9 +589,7 @@ int main() {
 	GPU_Geometry surface_gpu;
 
 	// Tensor Product Surface
-	std::vector<glm::vec3> tensor_cp;
-
-	std::vector<glm::vec3> tensor_cp2;
+	std::vector<glm::vec3> tps_points;
 
 	CPU_Geometry tensor_cpu;
 	GPU_Geometry tensor_gpu;
@@ -562,16 +669,44 @@ int main() {
 			surface_cpu.cols = std::vector<glm::vec3>(surface_cpu.verts.size(), glm::vec3(1, 1, 1)); // White color for Surface of Revolution
 
 			break;
+
+		case 4: // Tensor Product Surface
+			tps_points.clear();
+			tps_points = createTPS(params.tps_cp.getSurface[params.tps_option]);
 			
+			tensor_cpu.verts = tps_points;
+			tensor_cpu.cols = std::vector<glm::vec3>(tensor_cpu.verts.size(), glm::vec3(1, 1, 1)); // White color for Tensor Product Surface
+
+			break;
+
 		default:
 			break;
 		}
 
 		// Render control points
 		if (params.render_cp) {
-			cp_cpu.verts = params.cp_positions_vector;
-			cp_cpu.cols = params.cp_colours_vector;
+			if (params.scene == 4) {
+				cp_cpu.verts.clear();
+				std::vector<glm::vec3> cps;
 
+				if (params.tps_option != 0) {
+					for (const auto& vector : params.tps_cp.getSurface[params.tps_option]) {
+						for (const auto& cp : vector) {
+							cps.push_back(cp);
+						}
+					}
+					cp_cpu.verts = cps;
+					cp_cpu.cols = std::vector<glm::vec3>(cps.size(), params.cp_point_colour);
+				}
+			}
+
+			else {
+				cp_cpu.verts.clear();
+
+				cp_cpu.verts = params.cp_positions_vector;
+				cp_cpu.cols = params.cp_colours_vector;
+			}
+		
 			cp_gpu.setVerts(cp_cpu.verts);
 			cp_gpu.setCols(cp_cpu.cols);
 
@@ -589,18 +724,30 @@ int main() {
 			glDrawArrays(GL_LINE_STRIP, 0, curve_cpu.verts.size());
 		}
 
+		if (params.wireframe) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+		} else {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
+
 		if (params.scene == 3){ // Render Surface of Revolution
 			surface_gpu.setVerts(surface_cpu.verts);
 			surface_gpu.setCols(surface_cpu.cols);
 
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
 			surface_gpu.bind();
 			glDrawArrays(GL_TRIANGLES, 0, surface_cpu.verts.size());
 		}
-		
+
+		if (params.scene == 4) { // Render Tensor Product Surface
+			tensor_gpu.setVerts(tensor_cpu.verts);
+			tensor_gpu.setCols(tensor_cpu.cols);
+
+			tensor_gpu.bind();
+			glDrawArrays(GL_TRIANGLES, 0, tensor_cpu.verts.size());
+		}
 		// Render control point lines
-		if (params.render_cp_lines) {
+		if (params.render_cp_lines && params.scene != 4) {
 			cp_lines_cpu.verts = params.cp_positions_vector;
 			cp_lines_cpu.cols = params.cp_lines_colours_vector;
 

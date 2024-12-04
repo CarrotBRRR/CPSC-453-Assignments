@@ -21,7 +21,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
-#include "UnitCube.h"
+#include "UnitSphere.h"
 
 // EXAMPLE CALLBACKS
 class Assignment4 : public CallbackInterface {
@@ -86,7 +86,7 @@ int main() {
 
 	// WINDOW
 	glfwInit();
-	Window window(800, 800, "CPSC 453 - Assignment 3");
+	Window window(800, 800, "CPSC 453 - Assignment 4");
 
 	GLDebug::enable();
 
@@ -96,8 +96,23 @@ int main() {
 
 	ShaderProgram shader("shaders/test.vert", "shaders/test.frag");
 
-	UnitCube cube;
-	cube.generateGeometry();
+	UnitSphere earth;
+	earth.generateGeometry(1.0f);
+
+	UnitSphere moon;
+	moon.generateGeometry(0.25f);
+
+	UnitSphere sun;
+	sun.generateGeometry(5.0f);
+
+	UnitSphere stars;
+	stars.generateGeometry(500.0f);
+
+	// TEXTURES
+	Texture sun_tex("textures/8k_sun.jpg", GL_LINEAR);
+	Texture moon_tex("textures/8k_moon.jpg", GL_LINEAR);
+	Texture earth_tex("textures/8k_earth_daymap.jpg", GL_LINEAR);
+	Texture stars_tex("textures/8k_stars_milky_way.jpg", GL_LINEAR);
 
 	// RENDER LOOP
 	while (!window.shouldClose()) {
@@ -114,8 +129,36 @@ int main() {
 
 		a4->viewPipeline(shader);
 
-		cube.m_gpu_geom.bind();
-		glDrawArrays(GL_TRIANGLES, 0, GLsizei(cube.m_size));
+		// Model Matrices
+		GLint uniMat = glGetUniformLocation(shader, "M");
+		glm::mat4 earth_model = glm::translate(glm::mat4(1.0f), glm::vec3(7.0f, 0.0f, 0.0f));  
+		glm::mat4 moon_model = glm::translate(glm::mat4(1.0f), glm::vec3(9.0f, 0.0f, 0.0f)); 
+
+		// Sun
+		sun.m_gpu_geom.bind();
+		sun_tex.bind();
+		glDrawArrays(GL_TRIANGLES, 0, sun.m_size);
+		sun_tex.unbind();
+
+		// Moon
+		moon.m_gpu_geom.bind();
+		moon_tex.bind();
+		glUniformMatrix4fv(uniMat, 1, GL_FALSE, glm::value_ptr(moon_model));
+		glDrawArrays(GL_TRIANGLES, 0, moon.m_size);
+		moon_tex.unbind();
+
+		// Earth
+		earth.m_gpu_geom.bind();
+		earth_tex.bind();
+		glUniformMatrix4fv(uniMat, 1, GL_FALSE, glm::value_ptr(earth_model));
+		glDrawArrays(GL_TRIANGLES, 0, earth.m_size);
+		earth_tex.unbind();
+
+		// Stars		
+		stars.m_gpu_geom.bind();
+		stars_tex.bind();
+		glDrawArrays(GL_TRIANGLES, 0, stars.m_size);
+		stars_tex.unbind();
 
 		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 		window.swapBuffers();

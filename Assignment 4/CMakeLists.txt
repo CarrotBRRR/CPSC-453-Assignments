@@ -116,7 +116,7 @@ foreach(file ${files_t})
 	configure_file(${file} textures/${name} COPYONLY)
 endforeach()
 
-add_executable(${APP_NAME} ${SOURCES})
+add_executable(${APP_NAME} ${SOURCES} "assignment-4/UnitSphere.h" "assignment-4/UnitSphere.cpp")
 target_include_directories(${APP_NAME} PRIVATE ${INCLUDES})
 target_link_libraries(${APP_NAME} ${LIBRARIES})
 target_compile_definitions(${APP_NAME} PRIVATE ${DEFINITIONS})

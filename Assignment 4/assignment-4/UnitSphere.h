@@ -4,7 +4,8 @@
 #include <glm/gtx/transform.hpp>
 
 // Based on given UnitCube.h
-struct UnitSphere {
+class UnitSphere {
+public:
     CPU_Geometry m_cpu_geom;
     GPU_Geometry m_gpu_geom;
     glm::mat4 m_model;

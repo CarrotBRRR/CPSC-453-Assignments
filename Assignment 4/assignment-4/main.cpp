@@ -22,6 +22,14 @@
 #include "glm/gtc/type_ptr.hpp"
 
 #include "UnitSphere.h"
+#include "Planet.h"
+
+struct Parameters {
+	bool pause = false;
+	float dt = 0.0f;
+};
+
+static Parameters params;
 
 // EXAMPLE CALLBACKS
 class Assignment4 : public CallbackInterface {
@@ -35,7 +43,13 @@ public:
 		, mouseOldY(0.0)
 	{}
 
-	virtual void keyCallback(int key, int scancode, int action, int mods) {}
+	virtual void keyCallback(int key, int scancode, int action, int mods) {
+		if (action == GLFW_PRESS) {
+			if (key == GLFW_KEY_P) {
+				params.pause = !params.pause;
+			}
+		}
+	}
 	virtual void mouseButtonCallback(int button, int action, int mods) {
 		if (button == GLFW_MOUSE_BUTTON_RIGHT) {
 			if (action == GLFW_PRESS)			rightMouseDown = true;
@@ -96,22 +110,15 @@ int main() {
 
 	ShaderProgram shader("shaders/test.vert", "shaders/test.frag");
 
-	UnitSphere earth;
-	earth.generateGeometry(1.0f);
+	UnitSphere base_sphere;
+	base_sphere.generateGeometry(1.f);
 
-	UnitSphere moon;
-	moon.generateGeometry(0.25f);
-
-	UnitSphere sun;
-	sun.generateGeometry(5.0f);
+	Planet sun("textures/8k_sun.jpg", .005f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, nullptr);
+	Planet earth("textures/8k_earth_daymap.jpg", .5f, 1.0f, 0.5f, 0.5f, 0.0f, 0.41f, &sun);
+	Planet moon("textures/8k_moon.jpg", 0.25f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, &earth);
 
 	UnitSphere stars;
-	stars.generateGeometry(500.0f);
-
-	// TEXTURES
-	Texture sun_tex("textures/8k_sun.jpg", GL_LINEAR);
-	Texture moon_tex("textures/8k_moon.jpg", GL_LINEAR);
-	Texture earth_tex("textures/8k_earth_daymap.jpg", GL_LINEAR);
+	stars.generateGeometry(100.f);
 	Texture stars_tex("textures/8k_stars_milky_way.jpg", GL_LINEAR);
 
 	// RENDER LOOP
@@ -129,34 +136,33 @@ int main() {
 
 		a4->viewPipeline(shader);
 
-		// Model Matrices
+		float dt = params.dt;
+		if (!params.pause) {
+			float dt = glfwGetTime();
+			params.dt = dt;
+		}
+		else {
+			glfwSetTime(params.dt);
+		}
+
 		GLint uniMat = glGetUniformLocation(shader, "M");
-		glm::mat4 earth_model = glm::translate(glm::mat4(1.0f), glm::vec3(7.0f, 0.0f, 0.0f));  
-		glm::mat4 moon_model = glm::translate(glm::mat4(1.0f), glm::vec3(9.0f, 0.0f, 0.0f)); 
 
 		// Sun
-		sun.m_gpu_geom.bind();
-		sun_tex.bind();
-		glDrawArrays(GL_TRIANGLES, 0, sun.m_size);
-		sun_tex.unbind();
-
-		// Moon
-		moon.m_gpu_geom.bind();
-		moon_tex.bind();
-		glUniformMatrix4fv(uniMat, 1, GL_FALSE, glm::value_ptr(moon_model));
-		glDrawArrays(GL_TRIANGLES, 0, moon.m_size);
-		moon_tex.unbind();
+		sun.update(dt);
+		sun.draw(base_sphere, uniMat, 0);
 
 		// Earth
-		earth.m_gpu_geom.bind();
-		earth_tex.bind();
-		glUniformMatrix4fv(uniMat, 1, GL_FALSE, glm::value_ptr(earth_model));
-		glDrawArrays(GL_TRIANGLES, 0, earth.m_size);
-		earth_tex.unbind();
+		earth.update(dt);
+		earth.draw(base_sphere, uniMat, 0);
+
+		// Moon
+		moon.update(dt);
+		moon.draw(base_sphere, uniMat, 0);
 
 		// Stars		
 		stars.m_gpu_geom.bind();
 		stars_tex.bind();
+		glUniformMatrix4fv(uniMat, 1, GL_FALSE, glm::value_ptr(glm::mat4(100000.f)));
 		glDrawArrays(GL_TRIANGLES, 0, stars.m_size);
 		stars_tex.unbind();
 

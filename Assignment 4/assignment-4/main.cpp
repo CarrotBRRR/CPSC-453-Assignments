@@ -113,9 +113,9 @@ int main() {
 	UnitSphere base_sphere;
 	base_sphere.generateGeometry(1.f);
 
-	Planet sun("textures/8k_sun.jpg", .005f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, nullptr);
-	Planet earth("textures/8k_earth_daymap.jpg", .5f, 1.0f, 0.5f, 0.5f, 0.0f, 0.41f, &sun);
-	Planet moon("textures/8k_moon.jpg", 0.25f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, &earth);
+	Planet sun("textures/8k_sun.jpg", 5.f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, nullptr);
+	Planet earth("textures/8k_earth_daymap.jpg", .1f, 4.0f, 0.5f, 0.5f, .1f, 0.41f, &sun);
+	Planet moon("textures/8k_moon.jpg", 0.25f, 4.0f, 1.0f, 1000.0f, 0.0f, 0.0f, &earth);
 
 	UnitSphere stars;
 	stars.generateGeometry(100.f);
@@ -147,6 +147,7 @@ int main() {
 
 		GLint uniMat = glGetUniformLocation(shader, "M");
 
+		base_sphere.m_gpu_geom.bind();
 		// Sun
 		sun.update(dt);
 		sun.draw(base_sphere, uniMat, 0);

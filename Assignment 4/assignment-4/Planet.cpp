@@ -23,22 +23,23 @@ void Planet::update(float dt){
         model_matrix = parent->model_matrix;
     }
 
-    // Inclination
-    model_matrix = glm::rotate(model_matrix, orbital_angle, glm::vec3(1.f, 0.f, 0.f));
+	// Inclination
+	model_matrix = glm::rotate(model_matrix, orbital_angle, glm::vec3(1.f, 0.f, 0.f));
 
-    // Orbital Rotation about the parent
-    float orbit_dtheta = orbital_speed * dt;
-    model_matrix = glm::rotate(model_matrix, orbit_dtheta, glm::vec3(0.f, 1.f, 0.f));
+    // Orbital Speed about the parent
+	float orbit_dtheta = orbital_speed * dt;
 
     // Orbital Radius
-    model_matrix = glm::translate(model_matrix, glm::vec3(orbital_radius*1000, 0.f, 0.f));
+	float orbit_x = orbital_radius * cos(orbit_dtheta);
+	float orbit_z = orbital_radius * sin(orbit_dtheta);
+	model_matrix = glm::translate(model_matrix, glm::vec3(orbit_x, 0.f, orbit_z));
 
-    // Axial Tilt
-    model_matrix = glm::rotate(model_matrix, axis_angle, glm::vec3(0.f, 0.f, 1.f));
+	// Axial Tilt
+	model_matrix = glm::rotate(model_matrix, axis_angle, glm::vec3(0.f, 0.f, 1.f));
 
-    // Self Rotation
-    float spin_dtheta = spin_speed * dt;
-    model_matrix = glm::rotate(model_matrix, spin_dtheta, glm::vec3(0.f, 1.f, 0.f));
+	// Self Rotation
+	float spin_dtheta = spin_speed * dt;
+	model_matrix = glm::rotate(model_matrix, spin_dtheta, glm::vec3(0.f, 1.f, 0.f));
 
     // Scale
 	model_matrix = glm::scale(model_matrix, glm::vec3(scale));

@@ -203,12 +203,21 @@ int main() {
 		}
 
 		if (params.restart) {
+
+			// Reset Time
 			glfwSetTime(0.f);
-			params.animation_speed = 1.0f;
-			params.focus_planet = 0;
 			params.dt = 0.f;
-			params.restart = false;
+			params.last_time = 0.f;
+			params.current_time = 0.f;
+			params.animation_speed = 1.0f;
+
+			// Reset Camera
+			params.focus_planet = 0;
+			params.focused_planet_loc = glm::vec3(0.0f, 0.0f, 0.0f);
+
+			// Reset States
 			params.pause = false;
+			params.restart = false;
 		}
 
 		base_sphere.m_gpu_geom.bind();
@@ -226,19 +235,19 @@ int main() {
 		}
 
 		// Sun
-		sun.update(params.dt);
+		sun.update(-params.dt);
 		glUniform1f(ambient_strength_loc, 1.0f);
 		glUniform1i(addDiffuse, 0);
 		sun.draw(base_sphere, uniMat, 0);
 
 		// Earth
-		earth.update(params.dt);
+		earth.update(-params.dt);
 		glUniform1f(ambient_strength_loc, 0.025f);
 		glUniform1i(addDiffuse, 1);
 		earth.draw(base_sphere, uniMat, 0);
 
 		// Moon
-		moon.update(params.dt);
+		moon.update(-params.dt);
 		glUniform1f(ambient_strength_loc, 0.025f);
 		glUniform1i(addDiffuse, 1);
 		moon.draw(base_sphere, uniMat, 0);

@@ -15,9 +15,9 @@ out vec3 n;
 out vec2 tex_c;
 
 void main() {
-	fragPos = pos;
+	fragPos = vec3(M * vec4(pos, 1.0));
 	fragColor = color;
-	n = normal;
+	n = mat3(transpose(inverse(M))) * normal;
 
 	tex_c = tex_coords;
 

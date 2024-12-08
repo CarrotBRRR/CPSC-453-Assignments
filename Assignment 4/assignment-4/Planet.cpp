@@ -34,6 +34,8 @@ void Planet::update(float dt){
 	float orbit_z = orbital_radius * sin(orbit_dtheta);
 	model_matrix = glm::translate(model_matrix, glm::vec3(orbit_x, 0.f, orbit_z));
 
+	position = glm::vec3(model_matrix[3]);
+
 	// Axial Tilt
 	model_matrix = glm::rotate(model_matrix, axis_angle, glm::vec3(0.f, 0.f, 1.f));
 

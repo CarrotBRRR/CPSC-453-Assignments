@@ -26,7 +26,22 @@
 
 struct Parameters {
 	bool pause = false;
-	float dt = 0.0f;
+	bool restart = false;
+
+	float dt = 0.f;
+	float last_time = 0.f;
+	float current_time = 0.f;
+
+	float animation_speed = 1.0f;
+
+	glm::vec3 light_pos = glm::vec3(0.0f, 0.0f, 0.0f); // Sun position
+
+	glm::vec3 ambient_colour = glm::vec3(1.0f, 1.0f, 1.0f);
+	glm::vec3 diffuse_colour = glm::vec3(1.0f, 1.0f, 1.0f);
+	glm::vec3 specular_colour = glm::vec3(1.0f, 1.0f, 1.0f);
+
+	int focus_planet = 0;
+	glm::vec3 focused_planet_loc = glm::vec3(0.0f, 0.0f, 0.0f);
 };
 
 static Parameters params;
@@ -36,7 +51,7 @@ class Assignment4 : public CallbackInterface {
 
 public:
 	Assignment4()
-		: camera(glm::radians(45.f), glm::radians(45.f), 3.0)
+		: camera(glm::radians(45.f), glm::radians(45.f), 50.0)
 		, aspect(1.0f)
 		, rightMouseDown(false)
 		, mouseOldX(0.0)
@@ -47,6 +62,33 @@ public:
 		if (action == GLFW_PRESS) {
 			if (key == GLFW_KEY_P) {
 				params.pause = !params.pause;
+			}
+			if (key == GLFW_KEY_R) {
+				params.restart = true;
+			}
+
+			if (key == GLFW_KEY_1) {
+				params.focus_planet = 0;
+			}
+			if (key == GLFW_KEY_2) {
+				params.focus_planet = 1;
+			}
+			if (key == GLFW_KEY_3) {
+				params.focus_planet = 2;
+			}
+
+			if (key == GLFW_KEY_UP) {
+				params.focus_planet = (((params.focus_planet - 1) % 3) + 3) % 3;
+			}
+			if (key == GLFW_KEY_DOWN) {
+				params.focus_planet = (params.focus_planet + 1) % 3;
+			}
+
+			if (key == GLFW_KEY_EQUAL) {
+				params.animation_speed *= 1.1f;
+			}
+			if (key == GLFW_KEY_MINUS) {
+				params.animation_speed /= 1.1f;
 			}
 		}
 	}
@@ -74,8 +116,8 @@ public:
 	}
 
 	void viewPipeline(ShaderProgram &sp) {
-		glm::mat4 M = glm::mat4(1.0);
-		glm::mat4 V = camera.getView();
+		glm::mat4 M = glm::mat4(1.f);
+		glm::mat4 V = camera.getView(params.focused_planet_loc);
 		glm::mat4 P = glm::perspective(glm::radians(45.0f), aspect, 0.01f, 1000.f);
 		//GLint location = glGetUniformLocation(sp, "lightPosition");
 		//glm::vec3 light = camera.getPos();
@@ -113,13 +155,16 @@ int main() {
 	UnitSphere base_sphere;
 	base_sphere.generateGeometry(1.f);
 
+	// Planet Constructor(texture_path, scale, orbital_radius, orbital_speed, spin_speed, orbital_angle, axis_angle, parent)
 	Planet sun("textures/8k_sun.jpg", 5.f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, nullptr);
-	Planet earth("textures/8k_earth_daymap.jpg", .1f, 4.0f, 0.5f, 0.5f, .1f, 0.41f, &sun);
-	Planet moon("textures/8k_moon.jpg", 0.25f, 4.0f, 1.0f, 1000.0f, 0.0f, 0.0f, &earth);
+	Planet earth("textures/8k_earth_daymap.jpg", .5f, 4.0f, 2.f, 2.f, .2f, 0.42f, &sun);
+	Planet moon("textures/8k_moon.jpg", 0.25f, 4.0f, 1.0f, 10.0f, 1.0f, 0.0f, &earth);
 
 	UnitSphere stars;
 	stars.generateGeometry(100.f);
 	Texture stars_tex("textures/8k_stars_milky_way.jpg", GL_LINEAR);
+
+	GLint uniMat = glGetUniformLocation(shader, "M");
 
 	// RENDER LOOP
 	while (!window.shouldClose()) {
@@ -136,33 +181,73 @@ int main() {
 
 		a4->viewPipeline(shader);
 
-		float dt = params.dt;
+		GLint ambient_col_loc = glGetUniformLocation(shader, "ambient_colour");
+		glUniform3fv(ambient_col_loc, 1, glm::value_ptr(params.ambient_colour));
+		GLint ambient_strength_loc = glGetUniformLocation(shader, "ambient_strength");
+
+		GLint diffuse_col_loc = glGetUniformLocation(shader, "diffuse_colour");
+		glUniform3fv(diffuse_col_loc, 1, glm::value_ptr(params.diffuse_colour));
+		GLint addDiffuse = glGetUniformLocation(shader, "addDiffuse");
+
+		GLint specular_col_loc = glGetUniformLocation(shader, "specular_colour");
+		glUniform3fv(specular_col_loc, 1, glm::value_ptr(params.specular_colour));
+
+		float last_time = params.current_time;
 		if (!params.pause) {
-			float dt = glfwGetTime();
-			params.dt = dt;
+			params.current_time = glfwGetTime();
+			params.dt += (params.current_time - last_time) * params.animation_speed;
+			last_time = params.current_time;
 		}
 		else {
 			glfwSetTime(params.dt);
 		}
 
-		GLint uniMat = glGetUniformLocation(shader, "M");
+		if (params.restart) {
+			glfwSetTime(0.f);
+			params.animation_speed = 1.0f;
+			params.focus_planet = 0;
+			params.dt = 0.f;
+			params.restart = false;
+			params.pause = false;
+		}
 
 		base_sphere.m_gpu_geom.bind();
+
+		switch (params.focus_planet) {
+		case 0:
+			params.focused_planet_loc = sun.position;
+			break;
+		case 1:
+			params.focused_planet_loc = earth.position;
+			break;
+		case 2:
+			params.focused_planet_loc = moon.position;
+			break;
+		}
+
 		// Sun
-		sun.update(dt);
+		sun.update(params.dt);
+		glUniform1f(ambient_strength_loc, 1.0f);
+		glUniform1i(addDiffuse, 0);
 		sun.draw(base_sphere, uniMat, 0);
 
 		// Earth
-		earth.update(dt);
+		earth.update(params.dt);
+		glUniform1f(ambient_strength_loc, 0.025f);
+		glUniform1i(addDiffuse, 1);
 		earth.draw(base_sphere, uniMat, 0);
 
 		// Moon
-		moon.update(dt);
+		moon.update(params.dt);
+		glUniform1f(ambient_strength_loc, 0.025f);
+		glUniform1i(addDiffuse, 1);
 		moon.draw(base_sphere, uniMat, 0);
 
 		// Stars		
 		stars.m_gpu_geom.bind();
 		stars_tex.bind();
+		glUniform1f(ambient_strength_loc, 1.f);
+		glUniform1i(addDiffuse, 0);
 		glUniformMatrix4fv(uniMat, 1, GL_FALSE, glm::value_ptr(glm::mat4(100000.f)));
 		glDrawArrays(GL_TRIANGLES, 0, stars.m_size);
 		stars_tex.unbind();

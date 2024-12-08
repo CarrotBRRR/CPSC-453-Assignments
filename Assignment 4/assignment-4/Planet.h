@@ -22,6 +22,8 @@ class Planet {
         float spin_speed;
         float axis_angle;
 
+		glm::vec3 position;
+
         Planet* parent;
 
         Planet(

@@ -21,3 +21,14 @@ ObjectMaterial brassFromLecture() {
 	mat.reflectionStrength = glm::vec3(0.1);
 	return mat;
 }
+
+ObjectMaterial glass() {
+	ObjectMaterial mat;
+	mat.ambient = glm::vec3(0.1);
+	mat.diffuse = glm::vec3(0.1);
+	mat.specular = glm::vec3(0.9);
+	mat.specularCoefficient = 125.0f;
+	mat.reflectionStrength = glm::vec3(0.9);
+	mat.refractiveIndex = 1.1f;
+	return mat;
+}

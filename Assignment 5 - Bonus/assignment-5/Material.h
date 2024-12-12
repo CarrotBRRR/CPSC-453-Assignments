@@ -13,16 +13,17 @@ struct ObjectMaterial {
 	glm::vec3 specular;
 	glm::vec3 reflectionStrength;
 	float specularCoefficient = 0;
-	float refractiveIndex = 1.0;
+	float refractiveIndex = 0.0;
 
 	ObjectMaterial()
 		: ambient(0.0, 0.0, 0.0)
 		, diffuse(0, 0, 0)
 		, specular(0, 0, 0)
 		, reflectionStrength(0, 0, 0)
-		, refractiveIndex(1.0)
+		, refractiveIndex(0.0)
 	{}
 };
 
 ObjectMaterial goldFromSomeRandomWebsite();
 ObjectMaterial brassFromLecture();
+ObjectMaterial glass();

@@ -389,10 +389,7 @@ Scene initScene3() {
 	std::shared_ptr<Sphere> sphere1 = std::make_shared<Sphere>(
 		vec3(0.9, -1.925, -6.69), 0.825, 1
 	);
-	sphere1->material.diffuse = vec3(0.6, 0.6, 0.6);
-	sphere1->material.specular = 1.0f * sphere1->material.diffuse;
-	sphere1->material.reflectionStrength = vec3(0.4);
-	sphere1->material.specularCoefficient = 64;
+	sphere1->material = glass();
 	scene3.shapesInScene.push_back(sphere1);
 
 	//pyramid
@@ -519,7 +516,6 @@ Scene initScene4() {
 	scene4.shapesInScene.push_back(cylinder);
 
 	// Brass Cylinder on top of yellow sphere
-
 	std::shared_ptr<Cylinder> cylinder2 = std::make_shared<Cylinder>(
 		vec3(1, .5f, -3.5f), 0.25f, .5f, vec3(0, 1, 0), 9
 	);

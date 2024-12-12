@@ -49,7 +49,7 @@ vec3 refract(vec3 I, vec3 N, float refractiveIndex) {
 	float eta = etai / etat;
 	float k = 1 - eta * eta * (1 - cosi * cosi);
 
-	return k < 0 ? glm::reflect(I, N) : glm::normalize(eta * I - (eta * cosi + sqrtf(k)) * n);
+	return k < 0 ? glm::reflect(I, N) : glm::normalize(eta * I + (eta * cosi - sqrtf(k)) * n);
 }
 
 int hasIntersection(Scene const &scene, Ray ray, int skipID){
@@ -141,7 +141,7 @@ glm::vec3 raytraceSingleRay(Scene const &scene, Ray const &ray, int level, int s
 	// Refraction
 	glm::vec3 refracted(0.f);
 
-	if (phong.material.reflectionStrength != glm::vec3(0.f) && params.refractions) {
+	if (phong.material.reflectionStrength != glm::vec3(0.f) && params.refractions && phong.material.refractiveIndex >= 1) {
 		glm::vec3 refraction_dir = refract(ray.direction, result.normal, phong.material.refractiveIndex);
 		Ray refraction_ray(result.point + (refraction_dir * 0.001f), refraction_dir);
 

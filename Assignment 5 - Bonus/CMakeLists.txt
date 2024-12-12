@@ -50,6 +50,8 @@ include_directories(SYSTEM thirdparty/fmt-7.0.3/include)
 include_directories(SYSTEM thirdparty/stb-2.26)
 include_directories(SYSTEM thirdparty/imgui-1.78)
 
+find_package(OpenMP REQUIRED)
+
 find_package(OpenGL REQUIRED)
 set(LIBRARIES ${LIBRARIES} ${OPENGL_gl_LIBRARY})
 
@@ -107,7 +109,7 @@ endforeach()
 
 add_executable(${APP_NAME} ${SOURCES})
 target_include_directories(${APP_NAME} PRIVATE ${INCLUDES})
-target_link_libraries(${APP_NAME} ${LIBRARIES})
+target_link_libraries(${APP_NAME} ${LIBRARIES} OpenMP::OpenMP_CXX)
 target_compile_definitions(${APP_NAME} PRIVATE ${DEFINITIONS})
 target_compile_options(${APP_NAME} PRIVATE ${_453_CMAKE_CXX_FLAGS})
 set_target_properties(${APP_NAME} PROPERTIES INSTALL_RPATH "./" BUILD_RPATH "./")

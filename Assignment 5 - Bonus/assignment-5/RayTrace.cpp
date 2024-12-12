@@ -40,6 +40,48 @@ Intersection Sphere::getIntersection(Ray ray){
 	// If you get fancy and implement things like refraction, you may actually
 	// want to track more than one intersection. You'll need to change
 	// The intersection struct in that case.
+
+	vec3 L = ray.origin - centre;
+
+	// Quadratic formula
+	float a = 1.f; // dot(ray.direction, ray.direction) // 1
+	float b = 2.f * dot(ray.direction, L);
+	float c = dot(L, L) - radius * radius; // ||D||^2 - r^2
+
+	float discriminant = b * b - 4 * a * c; // b^2 - 4ac
+
+	// No real intersections (this is unreal)
+	if (discriminant < 0) {
+		i.numberOfIntersections = 0;
+		return i;
+
+	} else {
+		// Real intersections (S**t's getting real)
+		float tp = (-b + sqrt(discriminant)) / (2.f * a);
+		float tn = (-b - sqrt(discriminant)) / (2.f * a);
+
+		float t = 0.f;
+
+		if (tp > 0.f && tp < tn) {
+			t = tp;
+
+		} else if (tn > 0.f && tn < tp) {
+			t = tn;
+
+		} else {
+			t = -1.f;
+		}
+
+		if (t > 0.f) {
+			i.point = ray.origin + (t * ray.direction);
+			i.normal = normalize(i.point - centre);
+			i.numberOfIntersections = 1;
+
+		} else {
+			i.numberOfIntersections = 0;
+		}
+	}
+
 	return i;
 }
 
@@ -49,10 +91,12 @@ Intersection Sphere::getIntersection(Ray ray){
 //
 // Make sure you set all of the appropriate fields in the Intersection object.
 //------------------------------------------------------------------------------
-Cylinder::Cylinder(vec3 c, float r, int ID)
+Cylinder::Cylinder(vec3 c, float r, float h, vec3 ax, int ID)
 {
 	center = c;
 	radius = r;
+	height = h;
+	axis = ax;
 	id = ID;
 }
 
@@ -61,7 +105,6 @@ Intersection Cylinder::getIntersection(Ray ray)
 	Intersection i{};
 	i.id = id;
 	i.material = material;
-
 
 	// You are required to implement this intersection.
 	//
@@ -78,8 +121,142 @@ Intersection Cylinder::getIntersection(Ray ray)
 	// If you get fancy and implement things like refraction, you may actually
 	// want to track more than one intersection. You'll need to change
 	// The intersection struct in that case.
+
+			// Create a coordinate system based on the cylinder's axis
+	vec3 localZ = axis;
+	vec3 localX, localY;
+
+	// Create orthonormal basis
+	if (std::abs(localZ.x) > std::abs(localZ.y)) {
+		localY = vec3(0, 1, 0);
+		localX = normalize(cross(localZ, localY));
+		localY = cross(localX, localZ);
+	}
+	else {
+		localX = vec3(1, 0, 0);
+		localY = normalize(cross(localZ, localX));
+		localX = cross(localY, localZ);
+	}
+
+	// Transform ray to cylinder's local coordinate system
+	vec3 localOrigin = vec3(
+		dot(ray.origin - center, localX),
+		dot(ray.origin - center, localY),
+		dot(ray.origin - center, localZ)
+	);
+	vec3 localDirection = vec3(
+		dot(ray.direction, localX),
+		dot(ray.direction, localY),
+		dot(ray.direction, localZ)
+	);
+
+	// Closest intersection time
+	float closestIntersection = std::numeric_limits<float>::max();
+	bool hasIntersection = false;
+
+	// Cylinder side intersection
+	// Project ray direction and origin onto plane perpendicular to cylinder axis
+	vec3 rayDirXY = vec3(localDirection.x, localDirection.y, 0);
+	vec3 originXY = vec3(localOrigin.x, localOrigin.y, 0);
+
+	// Quadratic formula coefficients for xy-plane intersection
+	float a = dot(rayDirXY, rayDirXY);
+	float b = 2.0f * dot(rayDirXY, originXY);
+	float c = dot(originXY, originXY) - radius * radius;
+
+	// Calculate discriminant
+	float discriminant = b * b - 4 * a * c;
+
+	// Side surface intersection
+	if (discriminant >= 0) {
+		float tp = (-b + sqrt(discriminant)) / (2.f * a);
+		float tn = (-b - sqrt(discriminant)) / (2.f * a);
+
+		// Find valid intersection times
+		float t = (tp > 0 && (tp < tn || tn < 0)) ? tp : tn;
+
+		if (t > 0) {
+			vec3 localIntersectionPoint = localOrigin + (t * localDirection);
+
+			// Check if intersection is within cylinder's height
+			if (localIntersectionPoint.z >= -height / 2.0f && localIntersectionPoint.z <= height / 2.0f) {
+				closestIntersection = t;
+				hasIntersection = true;
+
+				// Transform intersection point back to world coordinates
+				i.point = center +
+					(localIntersectionPoint.x * localX) +
+					(localIntersectionPoint.y * localY) +
+					(localIntersectionPoint.z * localZ);
+
+				// Compute normal for side surface in world coordinates
+				vec3 localNormal = vec3(localIntersectionPoint.x, localIntersectionPoint.y, 0);
+				i.normal = normalize(
+					localNormal.x * localX +
+					localNormal.y * localY
+				);
+			}
+		}
+	}
+
+	// Top cap intersection
+	{
+		float t = (-height / 2.0f - localOrigin.z) / localDirection.z;
+		if (t > 0) {
+			vec3 intersectionPoint = localOrigin + (t * localDirection);
+			float distanceFromAxis = length(vec2(intersectionPoint.x, intersectionPoint.y));
+
+			if (distanceFromAxis <= radius) {
+				if (t < closestIntersection) {
+					closestIntersection = t;
+					hasIntersection = true;
+
+					// Transform intersection point back to world coordinates
+					i.point = center +
+						(intersectionPoint.x * localX) +
+						(intersectionPoint.y * localY) +
+						(intersectionPoint.z * localZ);
+
+					i.normal = localZ;
+				}
+			}
+		}
+	}
+
+	// Bottom cap intersection
+	{
+		float t = (height / 2.0f - localOrigin.z) / localDirection.z;
+		if (t > 0) {
+			vec3 intersectionPoint = localOrigin + (t * localDirection);
+			float distanceFromAxis = length(vec2(intersectionPoint.x, intersectionPoint.y));
+
+			if (distanceFromAxis <= radius) {
+				if (t < closestIntersection) {
+					closestIntersection = t;
+					hasIntersection = true;
+
+					// Transform intersection point back to world coordinates
+					i.point = center +
+						(intersectionPoint.x * localX) +
+						(intersectionPoint.y * localY) +
+						(intersectionPoint.z * localZ);
+
+					i.normal = -localZ;
+				}
+			}
+		}
+	}
+
+	// Set intersection result
+	if (hasIntersection) {
+		i.numberOfIntersections = 1;
+	}
+	else {
+		i.numberOfIntersections = 0;
+	}
+
 	return i;
-}
+};
 
 Plane::Plane(vec3 p, vec3 n, int ID){
 	point = p;

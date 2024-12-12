@@ -1,6 +1,8 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
+#define RAYTRACING_THREADS 16
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -25,6 +27,30 @@
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
 
+#include <omp.h>
+
+struct Parameters {
+	bool refractions = true;
+};
+
+static Parameters params;
+
+vec3 refract(vec3 I, vec3 N, float refractiveIndex) {
+	float cosi = glm::dot(I, N);
+	float etai = 1, etat = refractiveIndex;
+
+	vec3 n = N;
+	if (cosi < 0) {
+		cosi = -cosi;
+		std::swap(etai, etat);
+		n = -N;
+	}
+
+	float eta = etai / etat;
+	float k = 1 - eta * eta * (1 - cosi * cosi);
+
+	return k < 0 ? glm::reflect(I, N) : glm::normalize(eta * I - (eta * cosi + sqrtf(k)) * n);
+}
 
 int hasIntersection(Scene const &scene, Ray ray, int skipID){
 	for (auto &shape : scene.shapesInScene) {
@@ -60,7 +86,6 @@ Intersection getClosestIntersection(Scene const &scene, Ray ray, int skipID){ //
 	return closestIntersection;
 }
 
-
 glm::vec3 raytraceSingleRay(Scene const &scene, Ray const &ray, int level, int source_id) {
 	// TODO: Part 3: Somewhere in this function you will need to add the code to determine
 	//               if a given point is in shadow or not. Think carefully about what parts
@@ -77,14 +102,53 @@ glm::vec3 raytraceSingleRay(Scene const &scene, Ray const &ray, int level, int s
 	phong.material = result.material;
 	phong.intersection = result;
 
+	glm::vec3 local_color = phong.I();
+
 	if(result.numberOfIntersections == 0) return glm::vec3(0, 0, 0); // black;
 
 	if (level < 1) {
 		phong.material.reflectionStrength = glm::vec3(0);
 	}
 
+	// Max Depth
+	if (level > 10) {
+		return phong.I();
+	}
 
-	return phong.I();
+	// Part 3
+	Ray shadow_ray(result.point + (phong.l() * 0.001f), phong.l()); // Add offset to avoid grains
+
+	for (const auto& shape : scene.shapesInScene) {
+		Intersection shadow_result = shape->getIntersection(shadow_ray);
+
+		if (shadow_result.numberOfIntersections > 0) {
+			float d_shadow = glm::distance(result.point, shadow_result.point);
+			float d_light = glm::distance(result.point, scene.lightPosition);
+
+			if (d_light >= d_shadow) {
+				local_color = phong.Ia();
+			}
+		}
+	}
+
+	// Part 4
+	// Reflection
+	glm::vec3 reflection_dir = glm::normalize(glm::reflect(ray.direction, result.normal));
+	Ray reflection_ray(result.point + (reflection_dir * 0.001f), reflection_dir);
+
+	glm::vec3 reflected = raytraceSingleRay(scene, reflection_ray, level + 1, result.id) * phong.material.reflectionStrength;
+
+	// Refraction
+	glm::vec3 refracted(0.f);
+
+	if (phong.material.reflectionStrength != glm::vec3(0.f) && params.refractions) {
+		glm::vec3 refraction_dir = refract(ray.direction, result.normal, phong.material.refractiveIndex);
+		Ray refraction_ray(result.point + (refraction_dir * 0.001f), refraction_dir);
+
+		refracted = raytraceSingleRay(scene, refraction_ray, level + 1, result.id) * 0.4f;
+	}
+
+	return local_color + reflected + refracted;
 }
 
 struct RayAndPixel {
@@ -99,23 +163,36 @@ std::vector<RayAndPixel> getRaysForViewpoint(Scene const &scene, ImageBuffer &im
 	// This function is responsible for creating the rays that go
 	// from the viewpoint out into the scene with the appropriate direction
 	// and angles to produce a perspective image.
-	int x = 0;
-	int y = 0;
+
+	// Part 1
 	std::vector<RayAndPixel> rays;
 
-	// TODO: Part 1: Currently this is casting rays in an orthographic style.
-	//               You need to change this code to project them in a pinhole camera style.
-	for (float i = -1; x < image.Width(); x++) {
-		y = 0;
-		for (float j = -1; y < image.Height(); y++) {
-			glm::vec3 direction(0, 0, -1);
-			glm::vec3 viewPointOrthographic(i-viewPoint.x, j-viewPoint.y, 0);
-			Ray r = Ray(viewPointOrthographic, direction);
-			rays.push_back({r, x, y});
-			j += 2.f / image.Height();
+	float w = image.Width();
+	float h = image.Height();
+	float aspect_ratio = w / h;
+
+	constexpr float FoV = glm::radians(45.0f);
+	float view_dist = 10.f;
+
+	for (int x = 1; x < w; x++) {
+		float u = (2.f * x) / w - 1.f;
+
+		for (int y = 1; y < h; y++) {
+			float v =  (2.f * y) / h - 1.f;
+
+			glm::vec3 direction = glm::normalize(
+				glm::vec3(
+					u * aspect_ratio * glm::tan(FoV/2.f),
+					v * glm::tan(FoV / 2.f),
+					view_dist / -10.f
+				)
+			);
+
+			Ray ray(viewPoint, direction);
+			rays.push_back({ ray, x, y });
 		}
-		i += 2.f / image.Width();
 	}
+
 	return rays;
 }
 
@@ -125,7 +202,6 @@ void raytraceImage(Scene const &scene, ImageBuffer &image, glm::vec3 viewPoint) 
 
 	// Get the set of rays to cast for this given image / viewpoint
 	std::vector<RayAndPixel> rays = getRaysForViewpoint(scene, image, viewPoint);
-
 
 	// This loops processes each ray and stores the resulting pixel in the image.
 	// final color into the image at the appropriate location.
@@ -137,9 +213,13 @@ void raytraceImage(Scene const &scene, ImageBuffer &image, glm::vec3 viewPoint) 
 	// Note, if you do this, you will need to be careful about how you render
 	// things below too
 	// std::for_each(std::begin(rays), std::end(rays), [&] (auto const &r) {
-	for (auto const & r : rays) {
-		glm::vec3 color = raytraceSingleRay(scene, r.ray, 5, -1);
-		image.SetPixel(r.x, r.y, color);
+
+	omp_set_num_threads(RAYTRACING_THREADS);
+	#pragma omp parallel for
+
+	for (int i = 0; i < rays.size(); i++) {
+		glm::vec3 color = raytraceSingleRay(scene, rays[i].ray, 1, -1);
+		image.SetPixel(rays[i].x, rays[i].y, color);
 	}
 }
 
@@ -167,6 +247,21 @@ public:
 			scene = initScene2();
 			raytraceImage(scene, outputImage, viewPoint);
 		}
+
+		if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
+			scene = initScene3();
+			raytraceImage(scene, outputImage, viewPoint);
+		}
+
+		if (key == GLFW_KEY_4 && action == GLFW_PRESS) {
+			scene = initScene4();
+			raytraceImage(scene, outputImage, viewPoint);
+		}
+
+		if (key == GLFW_KEY_F && action == GLFW_PRESS) {
+			params.refractions = !params.refractions;
+			raytraceImage(scene, outputImage, viewPoint);
+		}
 	}
 
 	bool shouldQuit = false;
@@ -188,7 +283,7 @@ int main() {
 	// Change your image/screensize here.
 	int width = 800;
 	int height = 800;
-	Window window(width, height, "CPSC 453");
+	Window window(width, height, "CPSC 453: Assignment 5");
 
 	GLDebug::enable();
 

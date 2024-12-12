@@ -302,7 +302,7 @@ Scene initScene1() {
 
 	std::shared_ptr<Triangles> backWall = std::make_shared<Triangles>();
 	backWall->initTriangles(2, back_wall, 7);
-	backWall->material.diffuse = vec3(1.0, 1.0, 1.0);
+	backWall->material.diffuse = vec3(.5, 1.0, 0.f);
 	scene1.shapesInScene.push_back(backWall);
 
 	scene1.lightPosition = vec3(0,2.5,-7.75);
@@ -377,4 +377,160 @@ Scene initScene2() {
 	scene2.ambientFactor = 0.1f;
 
 	return scene2;
+}
+
+Scene initScene3() {
+	// Scene 3: Scene 1 with a Cylinder
+
+	//Scene 1
+	Scene scene3;
+
+	//Reflective grey sphere
+	std::shared_ptr<Sphere> sphere1 = std::make_shared<Sphere>(
+		vec3(0.9, -1.925, -6.69), 0.825, 1
+	);
+	sphere1->material.diffuse = vec3(0.6, 0.6, 0.6);
+	sphere1->material.specular = 1.0f * sphere1->material.diffuse;
+	sphere1->material.reflectionStrength = vec3(0.4);
+	sphere1->material.specularCoefficient = 64;
+	scene3.shapesInScene.push_back(sphere1);
+
+	//pyramid
+	std::shared_ptr<Triangles> pyramid = std::make_shared<Triangles>();
+	pyramid->initTriangles(4, blue_pyramid, 2);
+	pyramid->material.diffuse = vec3(0.0, 0.85, 0.95);
+	pyramid->material.specular = 0.1f * pyramid->material.diffuse;
+	pyramid->material.reflectionStrength = vec3(0.3);
+	scene3.shapesInScene.push_back(pyramid);
+
+	std::shared_ptr<Triangles> rightWall = std::make_shared<Triangles>();
+	rightWall->initTriangles(2, right_wall, 3);
+	rightWall->material.diffuse = vec3(0.0, 0.7, 0.0);
+	rightWall->material.ambient = 0.1f * rightWall->material.diffuse;
+	//rightWall->material.specular = 0.1f*rightWall->material.diffuse;
+	scene3.shapesInScene.push_back(rightWall);
+
+	std::shared_ptr<Triangles> leftWall = std::make_shared<Triangles>();
+	leftWall->initTriangles(2, left_wall, 4);
+	leftWall->material.diffuse = vec3(0.7, 0.0, 0.0);
+	leftWall->material.ambient = 0.1f * leftWall->material.diffuse;
+	//leftWall->material.specular = 0.1f*leftWall->material.diffuse;
+	scene3.shapesInScene.push_back(leftWall);
+
+	std::shared_ptr<Triangles> floorWall = std::make_shared<Triangles>();
+	floorWall->initTriangles(2, floor1, 5);
+	floorWall->material.diffuse = vec3(0.8, 0.8, 0.8);
+	floorWall->material.ambient = 0.1f * floorWall->material.diffuse;
+	//floorWall->material.specular = 0.1f*floorWall->material.diffuse;
+	scene3.shapesInScene.push_back(floorWall);
+
+	std::shared_ptr<Triangles> ceilingWall = std::make_shared<Triangles>();
+	ceilingWall->initTriangles(2, ceiling, 6);
+	ceilingWall->material.diffuse = vec3(1.0, 1.0, 1.0);
+	ceilingWall->material.ambient = 0.1f * ceilingWall->material.diffuse;
+	scene3.shapesInScene.push_back(ceilingWall);
+
+	std::shared_ptr<Triangles> backWall = std::make_shared<Triangles>();
+	backWall->initTriangles(2, back_wall, 7);
+	backWall->material.diffuse = vec3(.5, 1.0, 0.f);
+	scene3.shapesInScene.push_back(backWall);
+
+	// Brass Cylinder
+	std::shared_ptr<Cylinder> cylinder = std::make_shared<Cylinder>(
+		vec3(0.f, -.5f, -7.f), 0.5, 1, vec3(1, 1, .5), 8
+	);
+	cylinder->material = brassFromLecture();
+	scene3.shapesInScene.push_back(cylinder);
+
+	scene3.lightPosition = vec3(0, 2.5, -7.75);
+
+	scene3.lightColor = vec3(1, 1, 1);
+	scene3.ambientFactor = 0.1f;
+	return scene3;
+}
+
+Scene initScene4() {
+	// Scene 4: Scene 2 with a Cylinder
+
+	//Scene 2
+	Scene scene4;
+	std::shared_ptr<Triangles> Icosahedron = std::make_shared<Triangles>();
+	Icosahedron->initTriangles(20, icosahedron, 1);
+	Icosahedron->material.diffuse = vec3(1.0, 0.0, 0.0);
+	Icosahedron->material.reflectionStrength = vec3(0.5);
+	scene4.shapesInScene.push_back(Icosahedron);
+
+	// Large yellow sphere
+	std::shared_ptr<Sphere> sphere2 = std::make_shared<Sphere>(
+		vec3(1, -0.5, -3.5), 0.5, 2);
+	sphere2->material.diffuse = vec3(1.0, 1.0, 0.0);
+	sphere2->material.specular = sphere2->material.diffuse;
+	sphere2->material.specularCoefficient = 64;
+	scene4.shapesInScene.push_back(sphere2);
+
+	// Reflective grey sphere
+	std::shared_ptr<Sphere> sphere3 = std::make_shared<Sphere>(
+		vec3(0, 1, -5), 0.4, 3);
+	sphere3->material.diffuse = vec3(0.6, 0.6, 0.6);
+	sphere3->material.specular = sphere3->material.diffuse;
+	sphere3->material.reflectionStrength = vec3(0.5, 0.5, 0.5);
+	sphere3->material.specularCoefficient = 64;
+	scene4.shapesInScene.push_back(sphere3);
+
+
+	// Metallic purple sphere
+	std::shared_ptr<Sphere> sphere4 = std::make_shared<Sphere>(
+		vec3(-0.8, -0.75, -4), 0.25, 4);
+	sphere4->material.diffuse = vec3(0.4, 0.1, 1.0);
+	sphere4->material.specular = sphere4->material.diffuse;
+	sphere4->material.reflectionStrength = vec3(0.3);
+	sphere4->material.specularCoefficient = 64;
+	scene4.shapesInScene.push_back(sphere4);
+
+	//Green cone
+	std::shared_ptr<Triangles> greenCone = std::make_shared<Triangles>();
+	greenCone->initTriangles(12, green_Cone, 5);
+	greenCone->material.diffuse = vec3(0.0, 0.8, 0.0);
+	greenCone->material.specular = greenCone->material.diffuse;
+	greenCone->material.specularCoefficient = 8;
+	scene4.shapesInScene.push_back(greenCone);
+
+	//Floor
+	std::shared_ptr<Plane> floorTwo = std::make_shared<Plane>(
+		vec3(0, -1, 0), vec3(0, 1, 0), 6);
+	floorTwo->material.diffuse = vec3(0.8, 0.8, 0.8);
+	floorTwo->material.ambient = 0.5f * floorTwo->material.diffuse;
+	scene4.shapesInScene.push_back(floorTwo);
+
+	//Back wall
+	std::shared_ptr<Plane> backWallTwo = std::make_shared<Plane>(
+		vec3(0, 0, -12), vec3(0, 0, 1), 7);
+	backWallTwo->material.diffuse = vec3(0.0, 0.6, 0.6);
+	backWallTwo->material.ambient = 0.5f * backWallTwo->material.diffuse;
+	backWallTwo->material.specular = backWallTwo->material.diffuse;
+	backWallTwo->material.specularCoefficient = 8;
+	scene4.shapesInScene.push_back(backWallTwo);
+
+	// Gold Cylinder
+	std::shared_ptr<Cylinder> cylinder = std::make_shared<Cylinder>(
+		vec3(.5f, .5f, 1.f), .5, 3, vec3(1, 1, .3f), 8
+	);
+	cylinder->material = goldFromSomeRandomWebsite();
+	scene4.shapesInScene.push_back(cylinder);
+
+	// Brass Cylinder on top of yellow sphere
+
+	std::shared_ptr<Cylinder> cylinder2 = std::make_shared<Cylinder>(
+		vec3(1, .5f, -3.5f), 0.25f, .5f, vec3(0, 1, 0), 9
+	);
+	cylinder2->material = brassFromLecture();
+	cylinder2->material.specular = vec3(0.2);
+	scene4.shapesInScene.push_back(cylinder2);
+
+
+	scene4.lightPosition = vec3(4, 6, -1);
+	scene4.lightColor = vec3(1, 1, 1);
+	scene4.ambientFactor = 0.1f;
+
+	return scene4;
 }

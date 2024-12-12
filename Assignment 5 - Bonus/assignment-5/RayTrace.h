@@ -99,9 +99,23 @@ public:
 	vec3 center;
 	float radius;
 	float height;
+	vec3 axis;
 
-	Cylinder(vec3 c, float r, int ID);
+	Cylinder(vec3 c, float r, float h, vec3 ax, int ID);
 	Intersection getIntersection(Ray ray);
+
+	float intersectPlane(const Ray& ray, const vec3& planeCenter, const vec3& planeNormal) {
+		float denom = dot(planeNormal, ray.direction);
+
+		// Check if ray is parallel to plane
+		if (std::abs(denom) < 1e-6f) {
+			return -1.0f;
+		}
+
+		float t = dot(planeCenter - ray.origin, planeNormal) / denom;
+
+		return (t > 0) ? t : -1.0f;
+	}
 };
 
 class Plane: public Shape{

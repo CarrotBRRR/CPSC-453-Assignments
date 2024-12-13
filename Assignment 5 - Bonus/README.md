@@ -16,7 +16,8 @@
 | **1** | Scene 1 given from Skeleton |
 | **2** | Scene 2 given from Skeleton | 
 | **3** | Scene 1 with a cylinder floating in the air, |
-|		| and the sphere is now glass that has a refractive index of 1.5|
+|       | as well as one in place of the original sphere |
+|		| and is now glass that has a refractive index of 1.5 |
 | **4** | Scene 2 with a cylinder above the yellow ball, and another behind the camera |
 |       | (you can see it in the reflection of the shiny ball on top of the cone) |
 

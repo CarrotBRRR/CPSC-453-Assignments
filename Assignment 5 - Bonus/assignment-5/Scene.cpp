@@ -386,8 +386,8 @@ Scene initScene3() {
 	Scene scene3;
 
 	//Reflective grey sphere
-	std::shared_ptr<Sphere> sphere1 = std::make_shared<Sphere>(
-		vec3(0.9, -1.925, -6.69), 0.825, 1
+	std::shared_ptr<Cylinder> sphere1 = std::make_shared<Cylinder>(
+		vec3(0.9, -1.925, -6.69), 0.825, 1, vec3(0, 1, 0), 1
 	);
 	sphere1->material = glass();
 	scene3.shapesInScene.push_back(sphere1);
